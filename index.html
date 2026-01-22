@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>West Bengal Mobile Store</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#5080BE">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#5080BE">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary-bg: #E6F5FA;
+            --secondary-bg: #E0F2FC;
+            --card-bg: #C6DEF6;
+            --primary-brand: #5080BE;
+            --accent: #7EBBDA;
+            --text-primary: #1E2A3A;
+            --text-secondary: #4A607A;
+            --border: rgba(80,128,190,0.2);
+            --white: #ffffff;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --shadow: 0 4px 12px rgba(80, 128, 190, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+            padding-top: 60px; /* Space for fixed header */
+            padding-bottom: 80px; /* Space for potential bottom actions */
+            overflow-x: hidden;
+        }
+
+        /* --- UI Components --- */
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: var(--primary-brand);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 16px;
+        }
+
+        .icon-btn {
+            position: relative;
+            background: none;
+            border: none;
+            color: var(--white);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        /* Banners (Auto Adjust Logic) */
+        .banner-container {
+            width: 100%;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .hero-banner {
+            width: 100%;
+            /* Auto adjust aspect ratio */
+            aspect-ratio: 2/1; 
+            object-fit: cover;
+            border-radius: 0 0 16px 16px;
+            display: block;
+        }
+        
+        @media (min-width: 768px) {
+            .hero-banner {
+                aspect-ratio: 3/1;
+                border-radius: 16px;
+                margin: 16px;
+                width: calc(100% - 32px);
+            }
+        }
+
+        /* Sections */
+        .section {
+            padding: 0 16px;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Categories */
+        .category-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: none;
+        }
+        .category-scroll::-webkit-scrollbar { display: none; }
+
+        .cat-pill {
+            background: var(--white);
+            color: var(--primary-brand);
+            padding: 8px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .cat-pill.active {
+            background: var(--primary-brand);
+            color: var(--white);
+        }
+
+        /* Products Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .product-card {
+            background: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:active {
+            transform: scale(0.98);
+        }
+
+        .p-img-container {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: #f8f9fa;
+            position: relative;
+        }
+
+        .p-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 10px;
+        }
+
+        .p-details {
+            padding: 10px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .p-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .p-price-row {
+            margin-top: auto;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .p-price {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .p-old-price {
+            font-size: 0.8rem;
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .btn-add-sm {
+            margin-top: 8px;
+            width: 100%;
+            padding: 8px;
+            background: var(--secondary-bg);
+            color: var(--primary-brand);
+            border: 1px solid var(--primary-brand);
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-add-sm:hover {
+            background: var(--primary-brand);
+            color: var(--white);
+        }
+
+        /* Buttons & Inputs */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--primary-brand); color: white; }
+        .btn-secondary { background: var(--secondary-bg); color: var(--primary-brand); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-family: inherit;
+            background: var(--white);
+        }
+
+        /* Views */
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Product Detail View */
+        .pd-image {
+            width: 100%;
+            height: 300px;
+            object-fit: contain;
+            background: var(--white);
+        }
+        .pd-container { padding: 16px; background: var(--white); border-radius: 16px 16px 0 0; margin-top: -16px; position: relative; min-height: 50vh; }
+        .stock-tag { display: inline-block; padding: 4px 8px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; font-size: 0.8rem; margin-bottom: 8px; }
+
+        /* Cart & Checkout */
+        .cart-item {
+            display: flex;
+            gap: 12px;
+            background: var(--white);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .cart-img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
+        .cart-info { flex-grow: 1; }
+        .cart-ctrl { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+        .qty-btn { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); background: white; display: flex; align-items: center; justify-content: center; }
+
+        .checkout-step { background: var(--white); padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+        .checkout-step h3 { margin-bottom: 12px; color: var(--primary-brand); border-bottom: 1px solid var(--secondary-bg); padding-bottom: 8px; }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 2000;
+            width: max-content;
+            max-width: 90%;
+            text-align: center;
+        }
+        #toast.show { opacity: 1; }
+
+        /* Skeleton Loader */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 8px;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Bottom Fixed Action for Product Detail */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--white);
+            padding: 12px 16px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 12px;
+            z-index: 900;
+        }
+
+        /* Auth Screen */
+        .auth-container {
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div id="toast">Notification</div>
+
+    <!-- Header -->
+    <header id="main-header">
+        <div class="logo" onclick="router.navigate('home')">
+            <i class="fas fa-mobile-alt"></i> WB Mobile Store
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="router.navigate('cart')">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count" class="badge">0</span>
+            </button>
+            <button class="icon-btn" onclick="app.handleProfileClick()">
+                <i class="fas fa-user-circle"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- VIEWS -->
+
+    <!-- Home View -->
+    <div id="view-home" class="view active">
+        <div class="banner-container">
+            <img src="https://images.unsplash.com/photo-1605236453806-6ff36a86ca2f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1600&q=80" class="hero-banner" alt="Latest Mobile Deals">
+        </div>
+
+        <div class="section">
+            <div class="section-title">Categories</div>
+            <div class="category-scroll" id="cat-list">
+                <!-- Categories injected here -->
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Featured Mobiles</div>
+            <div class="product-grid" id="featured-grid">
+                <!-- Products injected here -->
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Latest Arrivals</div>
+            <div class="product-grid" id="latest-grid">
+                <!-- Products injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Detail View -->
+    <div id="view-product" class="view">
+        <div id="pd-content">
+            <!-- Details injected here -->
+        </div>
+    </div>
+
+    <!-- Cart View -->
+    <div id="view-cart" class="view">
+        <div class="section" style="margin-top: 20px;">
+            <div class="section-title">Your Cart</div>
+            <div id="cart-items">
+                <!-- Cart items here -->
+            </div>
+            <div id="cart-summary" style="margin-top: 20px; padding: 16px; background: white; border-radius: 12px; display:none;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span>Subtotal</span>
+                    <span id="cart-subtotal">₹0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-weight:700; font-size:1.1rem; color: var(--primary-brand);">
+                    <span>Total</span>
+                    <span id="cart-total">₹0</span>
+                </div>
+                <button class="btn btn-primary" style="margin-top: 16px;" onclick="router.navigate('checkout')">
+                    Proceed to Checkout
+                </button>
+            </div>
+            <div id="empty-cart-msg" style="text-align:center; padding: 40px; display:none;">
+                <i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ccc; margin-bottom: 16px;"></i>
+                <p>Your cart is empty.</p>
+                <button class="btn btn-outline" style="margin-top: 16px;" onclick="router.navigate('home')">Start Shopping</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout View -->
+    <div id="view-checkout" class="view">
+        <div class="section" style="margin-top: 20px;">
+            <h2 class="section-title">Checkout</h2>
+            
+            <!-- Step 1: Address -->
+            <div class="checkout-step">
+                <h3>1. Shipping Address</h3>
+                <form id="address-form">
+                    <input type="text" id="addr-name" placeholder="Full Name (Required)" required>
+                    <input type="tel" id="addr-phone" placeholder="Mobile Number (Required)" required>
+                    <input type="email" id="addr-email" placeholder="Email Address" disabled> <!-- Auto filled -->
+                    <textarea id="addr-full" rows="2" placeholder="Street Address, House No." required></textarea>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" id="addr-city" placeholder="City" required>
+                        <input type="text" id="addr-pin" placeholder="Pincode" required>
+                    </div>
+                    <input type="text" id="addr-state" placeholder="State" value="West Bengal" required>
+                </form>
+            </div>
+
+            <!-- Step 2: Payment -->
+            <div class="checkout-step">
+                <h3>2. Payment Method</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <label style="flex:1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="payment" value="COD" onchange="app.togglePayment('COD')" checked> COD
+                    </label>
+                    <label style="flex:1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="payment" value="UPI" onchange="app.togglePayment('UPI')"> UPI
+                    </label>
+                </div>
+
+                <div id="payment-upi-info" style="display: none; text-align: center; background: var(--secondary-bg); padding: 12px; border-radius: 8px;">
+                    <p style="font-size: 0.9rem; margin-bottom: 8px;">Scan to Pay</p>
+                    <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=wbstore@upi&pn=WBStore" alt="UPI QR" style="width: 150px; border-radius: 8px;">
+                    <p style="font-size: 0.8rem; margin: 8px 0;">Merchant: WB Mobile Store</p>
+                    <input type="text" id="payment-utr" placeholder="Enter UTR / Transaction ID (Required)" style="margin-top: 8px;">
+                </div>
+                <div id="payment-cod-info" style="padding: 10px; background: #e8f5e9; border-radius: 8px; font-size: 0.9rem; color: #2e7d32;">
+                    <i class="fas fa-check-circle"></i> Cash on Delivery available.
+                </div>
+            </div>
+
+            <!-- Step 3: Action -->
+            <button class="btn btn-primary" onclick="app.placeOrder()">Place Order</button>
+        </div>
+    </div>
+
+    <!-- Auth View -->
+    <div id="view-auth" class="view">
+        <div class="auth-container">
+            <h2 style="color: var(--primary-brand); margin-bottom: 24px;">Welcome Back</h2>
+            <div style="background: white; padding: 24px; border-radius: 16px; width: 100%; box-shadow: var(--shadow);">
+                <input type="email" id="auth-email" placeholder="Email Address">
+                <input type="password" id="auth-pass" placeholder="Password">
+                <input type="tel" id="auth-phone" placeholder="Phone (Register only)" style="display:none;">
+                
+                <button class="btn btn-primary" id="btn-login" onclick="authManager.login()">Login</button>
+                <button class="btn btn-primary" id="btn-register-submit" onclick="authManager.register()" style="display:none;">Sign Up</button>
+                
+                <p style="text-align: center; margin-top: 16px; font-size: 0.9rem;">
+                    <span id="auth-switch-text">New user? </span>
+                    <span style="color: var(--primary-brand); font-weight: bold; cursor: pointer;" onclick="authManager.toggleMode()">Register here</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile View -->
+    <div id="view-profile" class="view">
+        <div class="section" style="margin-top: 20px;">
+            <div style="background: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+                <div style="width: 60px; height: 60px; background: var(--secondary-bg); color: var(--primary-brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 10px;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <h3 id="profile-email">user@example.com</h3>
+                <button class="btn btn-outline" onclick="authManager.logout()" style="margin-top: 10px; padding: 8px;">Logout</button>
+            </div>
+
+            <div class="section-title">My Orders</div>
+            <div id="orders-list">
+                <!-- Orders injected here -->
+                <div class="skeleton" style="height: 100px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success View -->
+    <div id="view-success" class="view" style="text-align: center; padding-top: 60px;">
+        <i class="fas fa-check-circle" style="font-size: 80px; color: var(--success); margin-bottom: 20px;"></i>
+        <h2>Order Placed!</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 30px;">Your order has been successfully placed.</p>
+        <button class="btn btn-primary" style="width: auto; padding: 12px 30px; margin: 0 auto;" onclick="router.navigate('home')">Continue Shopping</button>
+    </div>
+
+    <script>
+        /* ================= CONFIGURATION ================= */
+        const firebaseConfig = {
+            apiKey: "AIzaSyBx724MefpWjw6KfUMX9o7BkygQ5xeD02k",
+            authDomain: "wb-mobile-store.firebaseapp.com",
+            projectId: "wb-mobile-store",
+            storageBucket: "wb-mobile-store.firebasestorage.app",
+            messagingSenderId: "54481231902",
+            appId: "1:54481231902:web:395ad38266e975fae6ce0f",
+            measurementId: "G-5R648HZ40T"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        /* ================= STATE & DATA ================= */
+        const state = {
+            products: [],
+            cart: JSON.parse(localStorage.getItem('wb_cart')) || [],
+            user: null,
+            categories: ['All', 'Samsung', 'Apple', 'Redmi', 'Vivo', 'Realme'],
+            currentCategory: 'All'
+        };
+
+        // Mock Data (Fallback if API fails or for speed)
+        const mockProducts = [
+            { id: '1', name: 'Samsung Galaxy S23 Ultra', price: 104999, originalPrice: 124999, category: 'Samsung', img: 'https://images.unsplash.com/photo-1610945265078-3858a0b5d8f4?auto=format&fit=crop&w=500&q=60', stock: 10, desc: 'The ultimate Galaxy experience with 200MP camera and S-Pen.' },
+            { id: '2', name: 'iPhone 15 Pro Max', price: 149900, originalPrice: 159900, category: 'Apple', img: 'https://images.unsplash.com/photo-1696446701796-da61225697cc?auto=format&fit=crop&w=500&q=60', stock: 5, desc: 'Titanium design, A17 Pro chip, and the most advanced iPhone camera.' },
+            { id: '3', name: 'Redmi Note 13 Pro', price: 21999, originalPrice: 25999, category: 'Redmi', img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff23?auto=format&fit=crop&w=500&q=60', stock: 20, desc: 'Super clear 200MP camera, 1.5K 120Hz display.' },
+            { id: '4', name: 'Vivo V29 Pro', price: 39999, originalPrice: 42999, category: 'Vivo', img: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&w=500&q=60', stock: 8, desc: 'Aura Light Portrait masterpiece.' },
+            { id: '5', name: 'Realme 11 Pro+', price: 27999, originalPrice: 29999, category: 'Realme', img: 'https://images.unsplash.com/photo-1600087626014-e652e18bbff2?auto=format&fit=crop&w=500&q=60', stock: 15, desc: 'Curved Vision Display and premium vegan leather design.' },
+            { id: '6', name: 'iPhone 14', price: 59999, originalPrice: 69900, category: 'Apple', img: 'https://images.unsplash.com/photo-1663499482523-1c0c167b297f?auto=format&fit=crop&w=500&q=60', stock: 12, desc: 'A total powerhouse with huge battery life.' }
+        ];
+
+        /* ================= ROUTING ================= */
+        const router = {
+            init: () => {
+                window.addEventListener('hashchange', router.handle);
+                router.handle();
+            },
+            navigate: (path) => {
+                window.location.hash = path;
+            },
+            handle: () => {
+                let hash = window.location.hash.slice(1) || 'home';
+                const params = hash.split('/');
+                const route = params[0];
+                
+                // Close all views
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                
+                // Scroll to top
+                window.scrollTo(0,0);
+
+                if (route === 'home') {
+                    document.getElementById('view-home').classList.add('active');
+                    app.renderHome();
+                } else if (route === 'product') {
+                    document.getElementById('view-product').classList.add('active');
+                    app.renderProductDetail(params[1]);
+                } else if (route === 'cart') {
+                    document.getElementById('view-cart').classList.add('active');
+                    app.renderCart();
+                } else if (route === 'checkout') {
+                    if(!state.user) {
+                        toast.show("Please login to checkout");
+                        router.navigate('auth');
+                        return;
+                    }
+                    if(state.cart.length === 0) {
+                        router.navigate('home');
+                        return;
+                    }
+                    document.getElementById('view-checkout').classList.add('active');
+                    app.prefillAddress();
+                } else if (route === 'auth') {
+                    document.getElementById('view-auth').classList.add('active');
+                } else if (route === 'profile') {
+                    if(!state.user) { router.navigate('auth'); return; }
+                    document.getElementById('view-profile').classList.add('active');
+                    app.renderOrders();
+                } else if (route === 'success') {
+                    document.getElementById('view-success').classList.add('active');
+                } else {
+                    router.navigate('home');
+                }
+            }
+        };
+
+        /* ================= LOGIC & CONTROLLERS ================= */
+        const app = {
+            init: () => {
+                state.products = mockProducts; // In prod, fetch from API here
+                app.updateCartCount();
+                
+                // Auth Listener
+                auth.onAuthStateChanged((user) => {
+                    state.user = user;
+                    if (user) {
+                        document.getElementById('addr-email').value = user.email;
+                        if(window.location.hash === '#auth') router.navigate('home');
+                    }
+                });
+            },
+
+            renderHome: () => {
+                // Render Categories
+                const catList = document.getElementById('cat-list');
+                catList.innerHTML = state.categories.map(c => 
+                    `<div class="cat-pill ${state.currentCategory === c ? 'active' : ''}" 
+                          onclick="app.filterCategory('${c}')">${c}</div>`
+                ).join('');
+
+                // Filter Products
+                const filtered = state.currentCategory === 'All' 
+                    ? state.products 
+                    : state.products.filter(p => p.category === state.currentCategory);
+
+                // Featured (Random 2)
+                const featuredHtml = filtered.slice(0, 2).map(app.createProductCard).join('');
+                document.getElementById('featured-grid').innerHTML = featuredHtml || '<p style="grid-column:span 2; text-align:center">No products found</p>';
+
+                // Latest (Rest)
+                const latestHtml = filtered.slice(2).map(app.createProductCard).join('');
+                document.getElementById('latest-grid').innerHTML = latestHtml || '';
+            },
+
+            filterCategory: (cat) => {
+                state.currentCategory = cat;
+                app.renderHome();
+            },
+
+            createProductCard: (p) => {
+                const discount = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+                return `
+                <div class="product-card" onclick="router.navigate('product/${p.id}')">
+                    <div class="p-img-container">
+                        <img src="${p.img}" class="p-img" alt="${p.name}">
+                        <div class="badge" style="top:10px; right:10px; font-size:0.8rem">${discount}% OFF</div>
+                    </div>
+                    <div class="p-details">
+                        <div class="p-name">${p.name}</div>
+                        <div class="p-price-row">
+                            <div class="p-price">₹${p.price.toLocaleString()}</div>
+                            <div class="p-old-price">₹${p.originalPrice.toLocaleString()}</div>
+                        </div>
+                        <button class="btn-add-sm" onclick="event.stopPropagation(); app.addToCart('${p.id}')">
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>`;
+            },
+
+            renderProductDetail: (id) => {
+                const p = state.products.find(x => x.id === id);
+                if (!p) return router.navigate('home');
+
+                const html = `
+                    <div style="background:white;">
+                        <img src="${p.img}" class="pd-image" alt="${p.name}">
+                    </div>
+                    <div class="pd-container">
+                        <div class="stock-tag">${p.stock > 0 ? 'In Stock' : 'Out of Stock'}</div>
+                        <h1 style="font-size: 1.4rem; margin-bottom: 8px;">${p.name}</h1>
+                        <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:16px;">
+                            <span style="font-size: 1.5rem; font-weight:700; color:var(--primary-brand)">₹${p.price.toLocaleString()}</span>
+                            <span style="text-decoration:line-through; color:var(--text-secondary)">₹${p.originalPrice.toLocaleString()}</span>
+                        </div>
+                        <div style="margin-bottom:20px; color: var(--text-secondary); line-height:1.6;">
+                            ${p.desc}
+                        </div>
+                        <div style="height: 60px;"></div> <!-- Spacer -->
+                    </div>
+                    <div class="bottom-bar">
+                        <button class="btn btn-secondary" onclick="app.addToCart('${p.id}')">Add to Cart</button>
+                        <button class="btn btn-primary" onclick="app.buyNow('${p.id}')">Buy Now</button>
+                    </div>
+                `;
+                document.getElementById('pd-content').innerHTML = html;
+            },
+
+            addToCart: (id) => {
+                const p = state.products.find(x => x.id === id);
+                const existing = state.cart.find(x => x.id === id);
+                
+                if (existing) {
+                    existing.qty++;
+                } else {
+                    state.cart.push({ ...p, qty: 1 });
+                }
+                
+                app.saveCart();
+                toast.show("Added to Cart");
+            },
+
+            buyNow: (id) => {
+                app.addToCart(id);
+                router.navigate('checkout');
+            },
+
+            saveCart: () => {
+                localStorage.setItem('wb_cart', JSON.stringify(state.cart));
+                app.updateCartCount();
+            },
+
+            updateCartCount: () => {
+                const count = state.cart.reduce((sum, item) => sum + item.qty, 0);
+                document.getElementById('cart-count').textContent = count;
+                document.getElementById('cart-count').style.display = count > 0 ? 'block' : 'none';
+            },
+
+            renderCart: () => {
+                const container = document.getElementById('cart-items');
+                const summary = document.getElementById('cart-summary');
+                const empty = document.getElementById('empty-cart-msg');
+
+                if (state.cart.length === 0) {
+                    container.innerHTML = '';
+                    summary.style.display = 'none';
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                empty.style.display = 'none';
+                summary.style.display = 'block';
+
+                let total = 0;
+                container.innerHTML = state.cart.map(item => {
+                    total += item.price * item.qty;
+                    return `
+                    <div class="cart-item">
+                        <img src="${item.img}" class="cart-img" alt="${item.name}">
+                        <div class="cart-info">
+                            <div style="font-weight:600; margin-bottom:4px;">${item.name}</div>
+                            <div style="color:var(--primary-brand); font-weight:700;">₹${item.price.toLocaleString()}</div>
+                            <div class="cart-ctrl">
+                                <button class="qty-btn" onclick="app.changeQty('${item.id}', -1)">-</button>
+                                <span>${item.qty}</span>
+                                <button class="qty-btn" onclick="app.changeQty('${item.id}', 1)">+</button>
+                                <button style="margin-left:auto; color:var(--danger); background:none; border:none;" onclick="app.removeItem('${item.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                document.getElementById('cart-subtotal').textContent = `₹${total.toLocaleString()}`;
+                document.getElementById('cart-total').textContent = `₹${total.toLocaleString()}`;
+            },
+
+            changeQty: (id, delta) => {
+                const item = state.cart.find(x => x.id === id);
+                if (item) {
+                    item.qty += delta;
+                    if (item.qty <= 0) app.removeItem(id);
+                    else app.saveCart();
+                    app.renderCart();
+                }
+            },
+
+            removeItem: (id) => {
+                state.cart = state.cart.filter(x => x.id !== id);
+                app.saveCart();
+                app.renderCart();
+            },
+
+            handleProfileClick: () => {
+                if (state.user) router.navigate('profile');
+                else router.navigate('auth');
+            },
+        /* --- CHECKOUT & ORDERS --- */
+
+            prefillAddress: async () => {
+                if(!state.user) return;
+                try {
+                    const doc = await db.collection('users').doc(state.user.uid).get();
+                    if(doc.exists) {
+                        const data = doc.data();
+                        if(data.address) {
+                            document.getElementById('addr-name').value = data.address.name || '';
+                            document.getElementById('addr-phone').value = data.address.phone || '';
+                            document.getElementById('addr-full').value = data.address.full || '';
+                            document.getElementById('addr-city').value = data.address.city || '';
+                            document.getElementById('addr-pin').value = data.address.pin || '';
+                        }
+                    }
+                } catch(e) { console.log("No saved address"); }
+            },
+
+            togglePayment: (method) => {
+                if(method === 'UPI') {
+                    document.getElementById('payment-upi-info').style.display = 'block';
+                    document.getElementById('payment-cod-info').style.display = 'none';
+                } else {
+                    document.getElementById('payment-upi-info').style.display = 'none';
+                    document.getElementById('payment-cod-info').style.display = 'block';
+                }
+            },
+
+            placeOrder: async () => {
+                // Validate Address
+                const name = document.getElementById('addr-name').value;
+                const phone = document.getElementById('addr-phone').value;
+                const address = document.getElementById('addr-full').value;
+                const city = document.getElementById('addr-city').value;
+                const pin = document.getElementById('addr-pin').value;
+                const stateText = document.getElementById('addr-state').value;
+
+                if(!name || !phone || !address || !city || !pin) {
+                    toast.show("Please fill all address fields");
+                    return;
+                }
+
+                // Validate Payment
+                const method = document.querySelector('input[name="payment"]:checked').value;
+                if(method === 'UPI') {
+                    const utr = document.getElementById('payment-utr').value;
+                    if(!utr) {
+                        toast.show("Please enter UPI UTR/Transaction ID");
+                        return;
+                    }
+                }
+
+                const btn = document.querySelector('#view-checkout .btn-primary');
+                btn.disabled = true;
+                btn.textContent = "Processing...";
+
+                try {
+                    const fullAddress = { name, phone, full: address, city, pin, state: stateText };
+                    const total = state.cart.reduce((s, i) => s + (i.price * i.qty), 0);
+                    
+                    const orderData = {
+                        userId: state.user.uid,
+                        items: state.cart,
+                        prices: { total },
+                        address: fullAddress,
+                        paymentMethod: method,
+                        paymentStatus: 'pending',
+                        orderStatus: 'pending',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    // Save Order
+                    await db.collection('orders').add(orderData);
+                    
+                    // Save Address to User Profile
+                    await db.collection('users').doc(state.user.uid).set({
+                        email: state.user.email,
+                        phone: phone, // Store phone as requested
+                        address: fullAddress
+                    }, { merge: true });
+
+                    // Clear Cart
+                    state.cart = [];
+                    app.saveCart();
+
+                    btn.disabled = false;
+                    btn.textContent = "Place Order";
+                    router.navigate('success');
+
+                } catch (err) {
+                    console.error(err);
+                    toast.show("Order Failed: " + err.message);
+                    btn.disabled = false;
+                    btn.textContent = "Place Order";
+                }
+            },
+
+            renderOrders: () => {
+                document.getElementById('profile-email').textContent = state.user.email;
+                const list = document.getElementById('orders-list');
+                list.innerHTML = '<div class="skeleton" style="height:100px;"></div>';
+
+                db.collection('orders')
+                  .where('userId', '==', state.user.uid)
+                  .orderBy('createdAt', 'desc')
+                  .get()
+                  .then(snap => {
+                      if(snap.empty) {
+                          list.innerHTML = '<p style="text-align:center; padding:20px;">No orders found.</p>';
+                          return;
+                      }
+                      
+                      list.innerHTML = snap.docs.map(doc => {
+                          const d = doc.data();
+                          const date = d.createdAt ? d.createdAt.toDate().toLocaleDateString() : 'Just now';
+                          let statusColor = d.orderStatus === 'pending' ? '#f39c12' : '#2ecc71';
+                          
+                          return `
+                          <div class="card" style="background:white; padding:16px; margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:8px;">
+                                    <span style="font-weight:bold; color:var(--text-secondary)">${date}</span>
+                                    <span style="color:${statusColor}; font-weight:bold; text-transform:capitalize;">${d.orderStatus}</span>
+                                </div>
+                                <div style="font-size:0.9rem; margin-bottom:8px;">
+                                    ${d.items.map(i => `${i.name} (x${i.qty})`).join(', ')}
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-weight:600;">
+                                    <span>Total Amount</span>
+                                    <span>₹${d.prices.total.toLocaleString()}</span>
+                                </div>
+                          </div>
+                          `;
+                      }).join('');
+                  });
+            }
+        };
+
+        /* ================= AUTH MANAGER ================= */
+        const authManager = {
+            isRegister: false,
+            
+            toggleMode: () => {
+                authManager.isRegister = !authManager.isRegister;
+                document.getElementById('auth-phone').style.display = authManager.isRegister ? 'block' : 'none';
+                document.getElementById('btn-login').style.display = authManager.isRegister ? 'none' : 'block';
+                document.getElementById('btn-register-submit').style.display = authManager.isRegister ? 'block' : 'none';
+                document.querySelector('#view-auth h2').textContent = authManager.isRegister ? 'Create Account' : 'Welcome Back';
+                document.getElementById('auth-switch-text').textContent = authManager.isRegister ? 'Already have an account? ' : 'New user? ';
+                document.querySelector('#auth-switch-text + span').textContent = authManager.isRegister ? 'Login here' : 'Register here';
+            },
+
+            login: async () => {
+                const email = document.getElementById('auth-email').value;
+                const pass = document.getElementById('auth-pass').value;
+                if(!email || !pass) return toast.show("Enter email and password");
+                
+                try {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                    toast.show("Logged in successfully");
+                } catch(e) { toast.show(e.message); }
+            },
+
+            register: async () => {
+                const email = document.getElementById('auth-email').value;
+                const pass = document.getElementById('auth-pass').value;
+                const phone = document.getElementById('auth-phone').value;
+                
+                if(!email || !pass || !phone) return toast.show("Fill all fields");
+
+                try {
+                    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+                    // Save phone to profile
+                    await db.collection('users').doc(cred.user.uid).set({
+                        email: email,
+                        phone: phone
+                    });
+                    toast.show("Account created");
+                } catch(e) { toast.show(e.message); }
+            },
+
+            logout: () => {
+                auth.signOut().then(() => {
+                    state.user = null;
+                    router.navigate('home');
+                    toast.show("Logged out");
+                });
+            }
+        };
+
+        /* ================= UTILS ================= */
+        const toast = {
+            show: (msg) => {
+                const el = document.getElementById('toast');
+                el.textContent = msg;
+                el.classList.add('show');
+                setTimeout(() => el.classList.remove('show'), 3000);
+            }
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+            router.init();
+        });
+
+    </script>
+</body>
+</html>
