@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WB Mobile Store</title>
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        ocean: {
+                            light: '#E0F2FC',
+                            sec: '#C6DEF6',
+                            brand: '#5080BE',
+                            accent: '#7EBBDA',
+                            card: '#E6F5FA',
+                            dark: '#1e3a8a'
+                        }
+                    },
+                    boxShadow: {
+                        '3d': '0 10px 15px -3px rgba(80, 128, 190, 0.3), 0 4px 6px -2px rgba(80, 128, 190, 0.1)',
+                        'inner-3d': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+                        'float': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #E0F2FC;
+            color: #1e3a8a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #5080BE;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 3D Button Effect */
+        .btn-3d {
+            transition: all 0.1s;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .btn-3d:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col pb-20 md:pb-0">
+
+    <nav class="bg-gradient-to-r from-ocean-brand to-blue-500 text-white sticky top-0 z-50 shadow-3d">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="router.navigate('home')">
+                <div class="w-9 h-9 bg-white rounded-full flex items-center justify-center text-ocean-brand font-bold shadow-lg">WB</div>
+                <span class="font-bold text-lg tracking-tight text-shadow">WB Store</span>
+            </div>
+
+            <div class="flex items-center space-x-5">
+                <div id="admin-link" class="hidden cursor-pointer bg-white text-ocean-brand px-3 py-1 rounded-full text-xs font-bold shadow-md hover:bg-gray-100" onclick="router.navigate('admin')">
+                    ADMIN PANEL
+                </div>
+                <div class="relative cursor-pointer transform hover:scale-110 transition" onclick="router.navigate('cart')">
+                    <i class="fa-solid fa-cart-shopping text-xl"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center hidden shadow-sm">0</span>
+                </div>
+                <div class="cursor-pointer transform hover:scale-110 transition" onclick="authManager.handleProfileClick()">
+                    <i class="fa-solid fa-user-circle text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="app-root" class="flex-grow fade-in w-full overflow-x-hidden">
+        </main>
+
+    <div class="md:hidden fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-ocean-sec flex justify-around py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div onclick="router.navigate('home')" class="flex flex-col items-center group">
+            <i class="fa-solid fa-house text-xl mb-1 nav-icon transition group-hover:-translate-y-1" id="nav-home"></i>
+            <span class="text-[10px] font-medium">Home</span>
+        </div>
+        <div onclick="router.navigate('orders')" class="flex flex-col items-center group">
+            <i class="fa-solid fa-box-open text-xl mb-1 nav-icon transition group-hover:-translate-y-1" id="nav-orders"></i>
+            <span class="text-[10px] font-medium">Orders</span>
+        </div>
+        <div onclick="router.navigate('profile')" class="flex flex-col items-center group">
+            <i class="fa-solid fa-user text-xl mb-1 nav-icon transition group-hover:-translate-y-1" id="nav-profile"></i>
+            <span class="text-[10px] font-medium">Profile</span>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-sm"></div>
+
+    <div id="auth-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-bounce-in">
+            <button onclick="ui.toggleAuthModal(false)" class="absolute top-4 right-4 text-gray-400 hover:text-red-500">
+                <i class="fa-solid fa-xmark text-2xl"></i>
+            </button>
+            
+            <div id="login-view">
+                <h2 class="text-2xl font-bold text-ocean-brand mb-1 text-center">Welcome Back</h2>
+                <p class="text-xs text-center text-gray-500 mb-6">Login to continue shopping</p>
+                <form onsubmit="authManager.login(event)">
+                    <input type="email" id="login-email" class="w-full mb-4 p-3 border border-gray-200 rounded-xl bg-ocean-light/50 focus:ring-2 focus:ring-ocean-brand outline-none" placeholder="Email Address" required>
+                    <input type="password" id="login-password" class="w-full mb-6 p-3 border border-gray-200 rounded-xl bg-ocean-light/50 focus:ring-2 focus:ring-ocean-brand outline-none" placeholder="Password" required>
+                    <button type="submit" class="w-full bg-ocean-brand text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-600 btn-3d">Login</button>
+                </form>
+                <div class="mt-4 text-center text-sm">
+                    Don't have an account? <span onclick="authManager.switchView('register')" class="text-ocean-brand font-bold cursor-pointer hover:underline">Create Account</span>
+                </div>
+            </div>
+
+            <div id="register-view" class="hidden">
+                <h2 class="text-2xl font-bold text-ocean-brand mb-1 text-center">Create Account</h2>
+                <p class="text-xs text-center text-gray-500 mb-6">Join WB Mobile Store today</p>
+                <form onsubmit="authManager.register(event)">
+                    <input type="text" name="fullName" class="w-full mb-3 p-3 border border-gray-200 rounded-xl bg-ocean-light/50 focus:ring-2 focus:ring-ocean-brand outline-none" placeholder="Full Name" required>
+                    <input type="tel" name="mobile" class="w-full mb-3 p-3 border border-gray-200 rounded-xl bg-ocean-light/50 focus:ring-2 focus:ring-ocean-brand outline-none" placeholder="Mobile Number" required>
+                    <input type="email" name="email" class="w-full mb-3 p-3 border border-gray-200 rounded-xl bg-ocean-light/50 focus:ring-2 focus:ring-ocean-brand outline-none" placeholder="Email Address" required>
+                    <input type="password" name="password" class="w-full mb-6 p-3 border border-gray-200 rounded-xl bg-ocean-light/50 focus:ring-2 focus:ring-ocean-brand outline-none" placeholder="Password (Min 6 chars)" required>
+                    <button type="submit" class="w-full bg-ocean-brand text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-600 btn-3d">Sign Up</button>
+                </form>
+                <div class="mt-4 text-center text-sm">
+                    Already have an account? <span onclick="authManager.switchView('login')" class="text-ocean-brand font-bold cursor-pointer hover:underline">Login</span>
+                </div>
+            </div>
+            
+            <div id="auth-error" class="mt-3 text-center text-red-500 text-xs font-bold hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        const ADMIN_EMAIL = "wbstore.india@gmail.com";
+        const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dyt6fwvw0/image/upload";
+        const CLOUDINARY_PRESET = "Wb_mobile_products";
+        const RENDER_BACKEND = "https://west-bengal-mobile-store-backend.onrender.com";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBx724MefpWjw6KfUMX9o7BkygQ5xeD02k",
+            authDomain: "wb-mobile-store.firebaseapp.com",
+            projectId: "wb-mobile-store",
+            storageBucket: "wb-mobile-store.firebasestorage.app",
+            messagingSenderId: "54481231902",
+            appId: "1:54481231902:web:395ad38266e975fae6ce0f",
+            measurementId: "G-5R648HZ40T"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // STATE
+        const store = {
+            user: null,
+            userData: null, // Stores name, mobile from Firestore
+            isAdmin: false,
+            cart: JSON.parse(localStorage.getItem('wb_cart')) || [],
+            products: [],
+            banners: []
+        };
+
+        // UI UTILS
+        const ui = {
+            toast: (msg, type = 'info') => {
+                const container = document.getElementById('toast-container');
+                const div = document.createElement('div');
+                div.className = `${type === 'error' ? 'bg-red-500' : 'bg-gray-800'} text-white px-4 py-3 rounded-xl shadow-2xl mb-2 text-sm font-medium fade-in flex items-center justify-between border border-gray-700`;
+                div.innerHTML = `<span>${msg}</span>`;
+                container.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            },
+            toggleAuthModal: (show) => {
+                document.getElementById('auth-modal').classList.toggle('hidden', !show);
+                if(show) authManager.switchView('login');
+            },
+            showLoading: (el) => { el.innerHTML = '<div class="flex justify-center py-10"><div class="loader"></div></div>'; },
+            formatPrice: (price) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(price)
+        };
+
+        // SERVICES
+        const services = {
+            uploadImage: async (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_PRESET);
+                try {
+                    const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+                    if(!res.ok) throw new Error();
+                    return (await res.json()).secure_url;
+                } catch { return null; }
+            },
+            fetchProducts: async () => {
+                const snap = await db.collection('products').where('active', '==', true).get();
+                store.products = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            },
+            fetchBanners: async () => {
+                const snap = await db.collection('banners').where('active', '==', true).get();
+                store.banners = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            }
+        };
+
+        // AUTH
+        const authManager = {
+            init: () => {
+                auth.onAuthStateChanged(async (user) => {
+                    store.user = user;
+                    if (user) {
+                        store.isAdmin = (user.email === ADMIN_EMAIL);
+                        // Fetch extra user details
+                        const doc = await db.collection('users').doc(user.uid).get();
+                        store.userData = doc.exists ? doc.data() : {};
+                        
+                        document.getElementById('admin-link').classList.toggle('hidden', !store.isAdmin);
+                    } else {
+                        store.userData = null;
+                        document.getElementById('admin-link').classList.add('hidden');
+                    }
+                });
+            },
+            switchView: (view) => {
+                document.getElementById('login-view').classList.toggle('hidden', view !== 'login');
+                document.getElementById('register-view').classList.toggle('hidden', view !== 'register');
+                document.getElementById('auth-error').classList.add('hidden');
+            },
+            login: async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const pass = document.getElementById('login-password').value;
+                try {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                    ui.toggleAuthModal(false);
+                    ui.toast('Welcome Back!');
+                } catch (err) {
+                    document.getElementById('auth-error').innerText = err.message;
+                    document.getElementById('auth-error').classList.remove('hidden');
+                }
+            },
+            register: async (e) => {
+                e.preventDefault();
+                const form = new FormData(e.target);
+                const email = form.get('email');
+                const password = form.get('password');
+                const mobile = form.get('mobile');
+                const name = form.get('fullName');
+
+                try {
+                    const cred = await auth.createUserWithEmailAndPassword(email, password);
+                    // Save extra details
+                    await db.collection('users').doc(cred.user.uid).set({
+                        name: name,
+                        mobile: mobile,
+                        email: email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    ui.toggleAuthModal(false);
+                    ui.toast('Account Created Successfully!');
+                    router.navigate('profile');
+                } catch (err) {
+                    document.getElementById('auth-error').innerText = err.message;
+                    document.getElementById('auth-error').classList.remove('hidden');
+                }
+            },
+            handleProfileClick: () => store.user ? router.navigate('profile') : ui.toggleAuthModal(true),
+            logout: () => {
+                auth.signOut();
+                localStorage.removeItem('wb_cart');
+                store.cart = [];
+                cartManager.updateCount();
+                ui.toast('Logged Out');
+                router.navigate('home');
+            }
+        };
+
+        // CART
+        const cartManager = {
+            add: (product) => {
+                const existing = store.cart.find(p => p.id === product.id);
+                if (existing) existing.qty++;
+                else store.cart.push({...product, qty: 1});
+                cartManager.save();
+                ui.toast('Added to Cart');
+            },
+            updateQty: (id, change) => {
+                const item = store.cart.find(p => p.id === id);
+                if (item) {
+                    item.qty += change;
+                    if (item.qty <= 0) store.cart = store.cart.filter(p => p.id !== id);
+                    cartManager.save();
+                    views.cart.render();
+                }
+            },
+            save: () => {
+                localStorage.setItem('wb_cart', JSON.stringify(store.cart));
+                cartManager.updateCount();
+            },
+            updateCount: () => {
+                const count = store.cart.reduce((a, b) => a + b.qty, 0);
+                const el = document.getElementById('cart-count');
+                el.innerText = count;
+                el.classList.toggle('hidden', count === 0);
+            },
+            total: () => store.cart.reduce((a, b) => a + (Number(b.price) * b.qty), 0)
+        };
+
+        // VIEWS
+        const views = {
+            home: {
+                render: async () => {
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = '<div class="loader mx-auto mt-10"></div>';
+                    await Promise.all([services.fetchBanners(), services.fetchProducts()]);
+                    
+                    // Render Banner
+                    let bannerHtml = '';
+                    if (store.banners.length > 0) {
+                        bannerHtml = `
+                            <div class="w-full relative overflow-hidden shadow-lg mb-4">
+                                <div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                                    ${store.banners.map(b => `
+                                        <div class="snap-center flex-shrink-0 w-full">
+                                            <img src="${b.image}" class="w-full h-48 md:h-72 object-cover">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>`;
+                    } else {
+                        bannerHtml = `<div class="w-full h-40 bg-gradient-to-r from-ocean-brand to-ocean-accent flex items-center justify-center text-white shadow-lg mb-4"><h1 class="text-2xl font-bold tracking-widest">WB STORE</h1></div>`;
+                    }
+
+                    // Render Products
+                    const prodHtml = store.products.map(p => `
+                        <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition duration-300 overflow-hidden flex flex-col border border-ocean-light" onclick="router.navigate('product/${p.id}')">
+                            <div class="h-40 bg-white flex items-center justify-center p-2 relative">
+                                <img src="${p.image}" class="h-full object-contain transform hover:scale-105 transition">
+                                ${p.stock <= 0 ? '<div class="absolute inset-0 bg-white/60 flex items-center justify-center"><span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">OUT OF STOCK</span></div>' : ''}
+                            </div>
+                            <div class="p-3 flex-grow bg-gradient-to-b from-white to-ocean-light/20">
+                                <h3 class="font-semibold text-sm text-gray-800 line-clamp-2 leading-tight">${p.name}</h3>
+                                <div class="mt-2 flex items-baseline space-x-2">
+                                    <span class="text-ocean-brand font-bold text-lg">${ui.formatPrice(p.price)}</span>
+                                    ${p.mrp ? `<span class="text-xs text-gray-400 line-through">${ui.formatPrice(p.mrp)}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    root.innerHTML = `
+                        ${bannerHtml}
+                        <div class="max-w-7xl mx-auto px-4 pb-20">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-lg font-bold text-ocean-dark border-l-4 border-ocean-brand pl-3">Latest Products</h2>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                ${prodHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            product: {
+                render: async (id) => {
+                    const root = document.getElementById('app-root');
+                    const product = store.products.find(p => p.id === id);
+                    if (!product) { router.navigate('home'); return; }
+
+                    // Fetch Reviews
+                    const reviewsSnap = await db.collection('reviews').where('productId', '==', id).orderBy('createdAt', 'desc').get();
+                    const reviews = reviewsSnap.docs.map(d => d.data());
+
+                    root.innerHTML = `
+                        <div class="bg-white min-h-screen pb-24">
+                            <div class="p-4 flex items-center sticky top-0 bg-white/90 backdrop-blur z-20">
+                                <button onclick="router.back()" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full shadow"><i class="fa-solid fa-arrow-left"></i></button>
+                                <span class="ml-3 font-bold truncate">${product.name}</span>
+                            </div>
+
+                            <div class="w-full h-72 bg-white flex items-center justify-center p-4">
+                                <img src="${product.image}" class="h-full object-contain filter drop-shadow-xl">
+                            </div>
+
+                            <div class="p-5 bg-white rounded-t-3xl shadow-[0_-5px_15px_rgba(0,0,0,0.05)] -mt-4 relative z-10">
+                                <h1 class="text-2xl font-bold text-gray-800 mb-2">${product.name}</h1>
+                                <div class="flex items-end space-x-3 mb-4">
+                                    <span class="text-3xl font-bold text-ocean-brand">${ui.formatPrice(product.price)}</span>
+                                    ${product.mrp ? `<span class="text-lg text-gray-400 line-through decoration-red-500">${ui.formatPrice(product.mrp)}</span>` : ''}
+                                    ${product.mrp ? `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-bold">${Math.round(((product.mrp - product.price)/product.mrp)*100)}% OFF</span>` : ''}
+                                </div>
+                                
+                                <h3 class="font-bold text-sm text-gray-400 uppercase tracking-wide mb-2">Description</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed mb-6">${product.description || 'No description available.'}</p>
+
+                                <div class="border-t border-gray-100 pt-6 mb-10">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="font-bold text-lg">Reviews (${reviews.length})</h3>
+                                        <button onclick="views.product.toggleReviewForm()" class="text-ocean-brand text-sm font-bold">Write Review</button>
+                                    </div>
+
+                                    <form id="review-form" class="hidden bg-gray-50 p-4 rounded-xl mb-4 border border-ocean-sec" onsubmit="views.product.submitReview(event, '${id}')">
+                                        <div class="flex space-x-2 mb-3 text-2xl text-gray-300" id="star-rating">
+                                            <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400" onclick="views.product.setRating(1)"></i>
+                                            <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400" onclick="views.product.setRating(2)"></i>
+                                            <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400" onclick="views.product.setRating(3)"></i>
+                                            <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400" onclick="views.product.setRating(4)"></i>
+                                            <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400" onclick="views.product.setRating(5)"></i>
+                                        </div>
+                                        <input type="hidden" name="rating" id="rating-input" value="5">
+                                        <textarea name="comment" class="w-full p-2 rounded border mb-2 text-sm" placeholder="Write your review..." required></textarea>
+                                        <input type="file" name="image" accept="image/*" class="text-xs mb-2">
+                                        <button type="submit" class="bg-ocean-brand text-white text-xs px-4 py-2 rounded-lg font-bold">Submit Review</button>
+                                    </form>
+
+                                    <div class="space-y-4">
+                                        ${reviews.map(r => `
+                                            <div class="flex space-x-3">
+                                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-xs text-blue-600">${r.userName[0]}</div>
+                                                <div class="flex-1">
+                                                    <div class="flex justify-between">
+                                                        <span class="font-bold text-sm">${r.userName}</span>
+                                                        <span class="text-yellow-400 text-xs">${'★'.repeat(r.rating)}</span>
+                                                    </div>
+                                                    <p class="text-gray-600 text-xs mt-1">${r.comment}</p>
+                                                    ${r.imageUrl ? `<img src="${r.imageUrl}" class="w-16 h-16 mt-2 rounded object-cover border">` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('') || '<p class="text-sm text-gray-400 italic">No reviews yet.</p>'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 shadow-[0_-5px_10px_rgba(0,0,0,0.1)] z-50 flex space-x-3 md:max-w-md md:left-1/2 md:-translate-x-1/2 md:mb-4 md:rounded-xl">
+                                <button onclick="cartManager.add({id: '${product.id}', name: '${product.name}', price: ${product.price}, image: '${product.image}'})" 
+                                    class="flex-1 bg-white border border-ocean-brand text-ocean-brand font-bold py-3 rounded-xl hover:bg-blue-50 transition active:scale-95">
+                                    Add to Cart
+                                </button>
+                                <button onclick="cartManager.add({id: '${product.id}', name: '${product.name}', price: ${product.price}, image: '${product.image}'}); router.navigate('cart')" 
+                                    class="flex-1 bg-gradient-to-r from-ocean-brand to-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition active:scale-95">
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                },
+                toggleReviewForm: () => {
+                    const form = document.getElementById('review-form');
+                    form.classList.toggle('hidden');
+                },
+                setRating: (n) => {
+                    document.getElementById('rating-input').value = n;
+                    const stars = document.getElementById('star-rating').children;
+                    for(let i=0; i<5; i++) {
+                        stars[i].classList.toggle('text-yellow-400', i < n);
+                        stars[i].classList.toggle('text-gray-300', i >= n);
+                    }
+                },
+                submitReview: async (e, pid) => {
+                    e.preventDefault();
+                    if(!store.user) { ui.toast('Login to review', 'error'); ui.toggleAuthModal(true); return; }
+                    
+                    const btn = e.target.querySelector('button');
+                    btn.disabled = true;
+                    btn.innerText = "Posting...";
+
+                    const formData = new FormData(e.target);
+                    const file = formData.get('image');
+                    let imgUrl = null;
+                    if(file.size > 0) imgUrl = await services.uploadImage(file);
+
+                    await db.collection('reviews').add({
+                        productId: pid,
+                        userId: store.user.uid,
+                        userName: store.userData?.name || store.user.email,
+                        rating: Number(formData.get('rating')),
+                        comment: formData.get('comment'),
+                        imageUrl: imgUrl,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    ui.toast('Review Posted!');
+                    views.product.render(pid); // Refresh
+                }
+            },
+            cart: {
+                render: () => {
+                    const root = document.getElementById('app-root');
+                    if(store.cart.length === 0) {
+                        root.innerHTML = `<div class="flex flex-col items-center justify-center h-[70vh] text-gray-400">
+                            <i class="fa-solid fa-cart-shopping text-6xl mb-4 text-ocean-light"></i>
+                            <h2 class="text-xl font-bold text-gray-600">Your cart is empty</h2>
+                            <button onclick="router.navigate('home')" class="mt-6 px-8 py-3 bg-ocean-brand text-white rounded-full font-bold shadow-lg shadow-blue-200">Start Shopping</button>
+                        </div>`;
+                        return;
+                    }
+
+                    root.innerHTML = `
+                        <div class="max-w-2xl mx-auto p-4 pb-32">
+                            <h2 class="text-xl font-bold mb-4">Shopping Cart</h2>
+                            ${store.cart.map(item => `
+                                <div class="flex bg-white p-3 rounded-xl mb-3 shadow-sm border border-ocean-light">
+                                    <div class="w-20 h-20 bg-gray-50 rounded-lg flex items-center justify-center p-2">
+                                        <img src="${item.image}" class="max-h-full max-w-full">
+                                    </div>
+                                    <div class="ml-4 flex-grow flex flex-col justify-between">
+                                        <h4 class="font-medium text-sm line-clamp-1">${item.name}</h4>
+                                        <div class="flex justify-between items-center">
+                                            <span class="font-bold text-ocean-brand">${ui.formatPrice(item.price)}</span>
+                                            <div class="flex items-center bg-ocean-light rounded-lg px-2 py-1 space-x-3">
+                                                <button onclick="cartManager.updateQty('${item.id}', -1)" class="text-ocean-brand font-bold">-</button>
+                                                <span class="text-sm font-bold w-4 text-center">${item.qty}</span>
+                                                <button onclick="cartManager.updateQty('${item.id}', 1)" class="text-ocean-brand font-bold">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            
+                            <div class="bg-white p-5 rounded-xl shadow-lg mt-6 border border-ocean-light">
+                                <h3 class="font-bold text-gray-500 uppercase text-xs mb-4">Order Summary</h3>
+                                <div class="flex justify-between mb-2 text-sm"><span>Subtotal</span><span>${ui.formatPrice(cartManager.total())}</span></div>
+                                <div class="flex justify-between mb-2 text-sm"><span>Delivery</span><span class="text-green-600 font-bold">Free</span></div>
+                                <div class="border-t border-dashed border-gray-300 my-3"></div>
+                                <div class="flex justify-between font-bold text-xl text-gray-800"><span>Total</span><span>${ui.formatPrice(cartManager.total())}</span></div>
+                                
+                                <button onclick="router.navigate('checkout')" class="w-full mt-6 bg-ocean-brand text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition btn-3d">
+                                    Proceed to Checkout
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            checkout: {
+                render: () => {
+                    if (!store.user) { ui.toggleAuthModal(true); return; }
+                    const root = document.getElementById('app-root');
+                    
+                    root.innerHTML = `
+                        <div class="max-w-2xl mx-auto p-4 pb-24">
+                            <div class="flex items-center mb-4">
+                                <button onclick="router.back()" class="mr-3"><i class="fa-solid fa-arrow-left"></i></button>
+                                <h2 class="text-xl font-bold">Checkout</h2>
+                            </div>
+                            
+                            <form onsubmit="views.checkout.submit(event)">
+                                <div class="bg-white p-5 rounded-xl shadow-sm mb-4 border border-ocean-light">
+                                    <h3 class="font-bold mb-3 text-ocean-brand flex items-center"><i class="fa-solid fa-location-dot mr-2"></i> Shipping Address</h3>
+                                    <input type="text" name="name" value="${store.userData?.name || ''}" placeholder="Full Name" required class="w-full mb-3 p-3 border rounded-lg bg-gray-50">
+                                    <input type="tel" name="mobile" value="${store.userData?.mobile || ''}" placeholder="Mobile Number" required class="w-full mb-3 p-3 border rounded-lg bg-gray-50">
+                                    <textarea name="address" placeholder="Full Address (House, Street, City, Pincode)" required class="w-full mb-3 p-3 border rounded-lg bg-gray-50 h-24"></textarea>
+                                </div>
+
+                                <div class="bg-white p-5 rounded-xl shadow-sm mb-6 border border-ocean-light">
+                                    <h3 class="font-bold mb-3 text-ocean-brand flex items-center"><i class="fa-solid fa-wallet mr-2"></i> Payment</h3>
+                                    
+                                    <label class="flex items-center p-3 border rounded-lg mb-2 cursor-pointer has-[:checked]:border-ocean-brand has-[:checked]:bg-ocean-light/30">
+                                        <input type="radio" name="payment" value="cod" checked class="mr-3 w-4 h-4 text-ocean-brand">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold text-sm">Cash on Delivery</span>
+                                            <span class="text-xs text-gray-500">Pay when you receive</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center p-3 border rounded-lg cursor-pointer has-[:checked]:border-ocean-brand has-[:checked]:bg-ocean-light/30">
+                                        <input type="radio" name="payment" value="upi" class="mr-3 w-4 h-4 text-ocean-brand" onclick="document.getElementById('upi-box').classList.remove('hidden')">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold text-sm">UPI Payment</span>
+                                            <span class="text-xs text-gray-500">Google Pay / PhonePe / Paytm</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <div id="upi-box" class="hidden mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100 animate-fade-in">
+                                        <p class="text-sm font-bold text-gray-800 mb-1">UPI ID: wbstore@upi</p>
+                                        <p class="text-xs text-gray-500 mb-2">Scan QR or pay to above ID and enter transaction UTR.</p>
+                                        <input type="text" name="utr" placeholder="Enter UTR / Transaction ID" class="w-full p-2 border rounded bg-white">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full bg-ocean-brand text-white font-bold py-4 rounded-xl shadow-xl hover:shadow-2xl transition btn-3d">
+                                    Place Order • ${ui.formatPrice(cartManager.total())}
+                                </button>
+                            </form>
+                        </div>
+                    `;
+                },
+                submit: async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button');
+                    btn.innerText = "Processing...";
+                    btn.disabled = true;
+
+                    const formData = new FormData(e.target);
+                    const orderData = {
+                        userId: store.user.uid,
+                        userEmail: store.user.email,
+                        customerName: formData.get('name'),
+                        mobile: formData.get('mobile'),
+                        address: formData.get('address'),
+                        paymentMethod: formData.get('payment'),
+                        paymentId: formData.get('utr') || '',
+                        items: store.cart,
+                        total: cartManager.total(),
+                        status: 'Pending',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    try {
+                        await db.collection('orders').add(orderData);
+                        store.cart = [];
+                        cartManager.save();
+                        ui.toast('Order Placed Successfully!', 'success');
+                        router.navigate('orders');
+                    } catch (err) {
+                        console.error(err);
+                        ui.toast('Failed to place order', 'error');
+                        btn.disabled = false;
+                        btn.innerText = "Try Again";
+                    }
+                }
+            },
+            orders: {
+                render: async () => {
+                    if(!store.user) { ui.toggleAuthModal(true); return; }
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = '<div class="loader mx-auto mt-10"></div>';
+
+                    const snap = await db.collection('orders').where('userId', '==', store.user.uid).orderBy('createdAt', 'desc').get();
+                    
+                    if(snap.empty) {
+                        root.innerHTML = `<div class="p-8 text-center text-gray-500 mt-10"><i class="fa-solid fa-box-open text-4xl mb-2"></i><br>No orders yet</div>`;
+                        return;
+                    }
+
+                    const html = snap.docs.map(doc => {
+                        const o = doc.data();
+                        const statusColors = {
+                            'Pending': 'bg-yellow-100 text-yellow-700',
+                            'Shipped': 'bg-blue-100 text-blue-700',
+                            'Delivered': 'bg-green-100 text-green-700',
+                            'Rejected': 'bg-red-100 text-red-700'
+                        };
+                        return `
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-ocean-light mb-4">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-bold text-gray-400">#${doc.id.slice(0,6).toUpperCase()}</span>
+                                    <span class="text-[10px] font-bold px-2 py-1 rounded-full ${statusColors[o.status] || 'bg-gray-100'}">${o.status}</span>
+                                </div>
+                                <div class="space-y-2 mb-3">
+                                    ${o.items.map(i => `
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">${i.qty}x ${i.name}</span>
+                                            <span class="font-medium">${ui.formatPrice(Number(i.price) * i.qty)}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="border-t pt-2 flex justify-between items-center">
+                                    <span class="text-xs text-gray-400">${o.createdAt?.toDate().toLocaleDateString() || 'Just now'}</span>
+                                    <span class="font-bold text-ocean-brand">${ui.formatPrice(o.total)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    root.innerHTML = `<div class="max-w-2xl mx-auto p-4 pb-20"><h2 class="text-xl font-bold mb-4">My Orders</h2>${html}</div>`;
+                }
+            },
+            admin: {
+                render: async () => {
+                    if (!store.isAdmin) { router.navigate('home'); return; }
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = `
+                        <div class="p-4 max-w-4xl mx-auto pb-24">
+                            <h1 class="text-2xl font-bold text-ocean-dark mb-6">Admin Dashboard</h1>
+                            
+                            <div class="flex space-x-2 mb-6 overflow-x-auto">
+                                <button onclick="views.admin.switchTab('products')" class="px-4 py-2 bg-ocean-brand text-white rounded-lg shadow font-bold text-sm whitespace-nowrap">Products</button>
+                                <button onclick="views.admin.switchTab('banners')" class="px-4 py-2 bg-white text-ocean-brand border border-ocean-brand rounded-lg shadow font-bold text-sm whitespace-nowrap">Banners</button>
+                                <button onclick="views.admin.switchTab('orders')" class="px-4 py-2 bg-white text-ocean-brand border border-ocean-brand rounded-lg shadow font-bold text-sm whitespace-nowrap">Orders</button>
+                            </div>
+                            
+                            <div id="admin-panel-content">
+                                </div>
+                        </div>
+                    `;
+                    views.admin.switchTab('products');
+                },
+                switchTab: async (tab) => {
+                    const container = document.getElementById('admin-panel-content');
+                    container.innerHTML = '<div class="loader mx-auto"></div>';
+                    
+                    if (tab === 'products') {
+                        container.innerHTML = `
+                            <div class="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+                                <h3 class="font-bold mb-4">Add New Product</h3>
+                                <form onsubmit="views.admin.addProduct(event)">
+                                    <input type="text" name="name" placeholder="Name" required class="w-full mb-2 p-2 border rounded">
+                                    <div class="flex space-x-2 mb-2">
+                                        <input type="number" name="price" placeholder="Price" required class="w-1/2 p-2 border rounded">
+                                        <input type="number" name="mrp" placeholder="MRP" class="w-1/2 p-2 border rounded">
+                                    </div>
+                                    <textarea name="desc" placeholder="Description" class="w-full mb-2 p-2 border rounded"></textarea>
+                                    <input type="number" name="stock" placeholder="Stock" required class="w-full mb-2 p-2 border rounded">
+                                    <input type="file" name="image" required class="mb-3 text-sm">
+                                    <button class="w-full bg-green-500 text-white py-2 rounded font-bold">Upload Product</button>
+                                </form>
+                            </div>
+                        `;
+                    } 
+                    else if (tab === 'banners') {
+                        const snap = await db.collection('banners').get();
+                        const banners = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                        container.innerHTML = `
+                            <div class="bg-white p-4 rounded-xl shadow-md mb-6">
+                                <h3 class="font-bold mb-3">Upload Homepage Banner</h3>
+                                <form onsubmit="views.admin.addBanner(event)">
+                                    <input type="file" id="banner-file" required class="mb-3 w-full">
+                                    <button class="w-full bg-ocean-brand text-white py-2 rounded font-bold shadow">Upload Banner</button>
+                                </form>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${banners.map(b => `
+                                    <div class="relative group">
+                                        <img src="${b.image}" class="w-full h-32 object-cover rounded-lg shadow-sm">
+                                        <button onclick="views.admin.deleteBanner('${b.id}')" class="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full text-xs px-2 shadow">Delete</button>
+                                        <div class="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">${b.active ? 'Active' : 'Hidden'}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                    else if (tab === 'orders') {
+                        const snap = await db.collection('orders').orderBy('createdAt', 'desc').limit(20).get();
+                        container.innerHTML = snap.docs.map(d => {
+                            const o = d.data();
+                            return `
+                                <div class="bg-white p-4 rounded-xl shadow-sm mb-3 border border-ocean-light">
+                                    <div class="flex justify-between">
+                                        <span class="font-bold text-sm">${o.customerName}</span>
+                                        <span class="font-bold text-ocean-brand">${ui.formatPrice(o.total)}</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 my-1">${o.address}</div>
+                                    <div class="flex justify-between items-center mt-2">
+                                        <select onchange="views.admin.updateStatus('${d.id}', this.value)" class="border rounded p-1 text-xs">
+                                            <option ${o.status==='Pending'?'selected':''}>Pending</option>
+                                            <option ${o.status==='Approved'?'selected':''}>Approved</option>
+                                            <option ${o.status==='Shipped'?'selected':''}>Shipped</option>
+                                            <option ${o.status==='Delivered'?'selected':''}>Delivered</option>
+                                            <option ${o.status==='Rejected'?'selected':''}>Rejected</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                },
+                addProduct: async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button');
+                    btn.disabled = true; btn.innerText = "Uploading...";
+                    
+                    const form = new FormData(e.target);
+                    const imgUrl = await services.uploadImage(form.get('image'));
+                    
+                    if(imgUrl) {
+                        await db.collection('products').add({
+                            name: form.get('name'),
+                            price: Number(form.get('price')),
+                            mrp: Number(form.get('mrp')) || 0,
+                            description: form.get('desc'),
+                            stock: Number(form.get('stock')),
+                            image: imgUrl,
+                            active: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        ui.toast('Product Added');
+                        e.target.reset();
+                    }
+                    btn.disabled = false; btn.innerText = "Upload Product";
+                },
+                addBanner: async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button');
+                    btn.innerText = "Uploading...";
+                    const file = document.getElementById('banner-file').files[0];
+                    const url = await services.uploadImage(file);
+                    if(url) {
+                        await db.collection('banners').add({
+                            image: url,
+                            active: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        ui.toast('Banner Uploaded');
+                        views.admin.switchTab('banners');
+                    }
+                    btn.innerText = "Upload Banner";
+                },
+                deleteBanner: async (id) => {
+                    if(confirm('Delete Banner?')) {
+                        await db.collection('banners').doc(id).delete();
+                        views.admin.switchTab('banners');
+                    }
+                },
+                updateStatus: (id, val) => {
+                    db.collection('orders').doc(id).update({status: val});
+                    ui.toast('Status Updated');
+                }
+            },
+            profile: {
+                render: () => {
+                    if(!store.user) { router.navigate('home'); return; }
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = `
+                        <div class="max-w-md mx-auto p-6">
+                            <div class="bg-white rounded-2xl shadow-lg p-6 text-center mb-6 border border-ocean-light relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-full h-20 bg-gradient-to-r from-ocean-brand to-ocean-accent opacity-20"></div>
+                                <div class="w-24 h-24 bg-white rounded-full mx-auto flex items-center justify-center text-ocean-brand text-4xl font-bold mb-3 shadow-lg relative z-10 border-4 border-white">
+                                    ${store.userData?.name ? store.userData.name[0] : store.user.email[0].toUpperCase()}
+                                </div>
+                                <h2 class="text-xl font-bold text-gray-800">${store.userData?.name || 'User'}</h2>
+                                <p class="text-gray-500 text-sm mb-2">${store.user.email}</p>
+                                ${store.isAdmin ? '<span class="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-bold tracking-wider">ADMIN</span>' : ''}
+                            </div>
+
+                            <div class="space-y-3">
+                                <button onclick="router.navigate('orders')" class="w-full flex justify-between items-center p-4 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition border border-gray-100">
+                                    <div class="flex items-center"><i class="fa-solid fa-box text-ocean-brand w-8"></i> <span class="font-medium">My Orders</span></div>
+                                    <i class="fa-solid fa-chevron-right text-gray-300"></i>
+                                </button>
+                                
+                                <button onclick="authManager.logout()" class="w-full p-4 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition mt-6">
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // ROUTER
+        const router = {
+            navigate: (hash) => { location.hash = hash; },
+            back: () => history.back(),
+            handle: () => {
+                const hash = location.hash.slice(1) || 'home';
+                cartManager.updateCount();
+                
+                // Active Nav State
+                document.querySelectorAll('.nav-icon').forEach(i => i.classList.remove('text-ocean-brand'));
+                if(hash === 'home') document.getElementById('nav-home')?.classList.add('text-ocean-brand');
+                if(hash === 'orders') document.getElementById('nav-orders')?.classList.add('text-ocean-brand');
+                if(hash === 'profile') document.getElementById('nav-profile')?.classList.add('text-ocean-brand');
+
+                if (hash === 'home') views.home.render();
+                else if (hash.startsWith('product/')) views.product.render(hash.split('/')[1]);
+                else if (hash === 'cart') views.cart.render();
+                else if (hash === 'checkout') views.checkout.render();
+                else if (hash === 'orders') views.orders.render();
+                else if (hash === 'profile') views.profile.render();
+                else if (hash === 'admin') views.admin.render();
+                
+                window.scrollTo(0,0);
+            }
+        };
+
+        window.addEventListener('load', () => { authManager.init(); router.handle(); });
+        window.addEventListener('hashchange', router.handle);
+    </script>
+</body>
+</html>
+
