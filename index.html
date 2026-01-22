@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WB Mobile Store</title>
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        ocean: {
+                            light: '#E0F2FC',      // Primary BG
+                            sec: '#C6DEF6',        // Secondary BG
+                            brand: '#5080BE',      // Primary Button/Highlight
+                            accent: '#7EBBDA',     // Badges/Icons
+                            card: '#E6F5FA',       // Cards/Soft White
+                            dark: '#1e3a8a'        // Text color
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #E0F2FC;
+            color: #1e3a8a;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Hide scrollbar for clean horizontal scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #5080BE;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-ocean-brand text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <!-- Logo / Brand -->
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="router.navigate('home')">
+                <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-ocean-brand font-bold">WB</div>
+                <span class="font-bold text-lg tracking-tight">WB Mobile Store</span>
+            </div>
+
+            <!-- Icons -->
+            <div class="flex items-center space-x-4">
+                <div id="admin-link" class="hidden cursor-pointer bg-white text-ocean-brand px-2 py-1 rounded text-xs font-bold" onclick="router.navigate('admin')">
+                    ADMIN
+                </div>
+                <div class="relative cursor-pointer" onclick="router.navigate('cart')">
+                    <i class="fa-solid fa-cart-shopping text-xl"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center hidden">0</span>
+                </div>
+                <div class="cursor-pointer" onclick="authManager.handleProfileClick()">
+                    <i class="fa-regular fa-user text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-root" class="flex-grow pb-16 fade-in">
+        <!-- Content injected via JS -->
+    </main>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <div class="md:hidden fixed bottom-0 w-full bg-white border-t border-ocean-sec flex justify-around py-3 z-30 text-gray-500">
+        <div onclick="router.navigate('home')" class="flex flex-col items-center">
+            <i class="fa-solid fa-house text-lg mb-1 nav-icon" id="nav-home"></i>
+            <span class="text-xs">Home</span>
+        </div>
+        <div onclick="router.navigate('orders')" class="flex flex-col items-center">
+            <i class="fa-solid fa-box text-lg mb-1 nav-icon" id="nav-orders"></i>
+            <span class="text-xs">Orders</span>
+        </div>
+        <div onclick="router.navigate('profile')" class="flex flex-col items-center">
+            <i class="fa-solid fa-user text-lg mb-1 nav-icon" id="nav-profile"></i>
+            <span class="text-xs">Profile</span>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
+            <button onclick="ui.toggleAuthModal(false)" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 class="text-2xl font-bold text-ocean-brand mb-6 text-center">Welcome Back</h2>
+            <form id="login-form" onsubmit="authManager.login(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="login-email" class="w-full p-3 border border-ocean-sec rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-brand bg-ocean-light" placeholder="email@example.com" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="login-password" class="w-full p-3 border border-ocean-sec rounded-lg focus:outline-none focus:ring-2 focus:ring-ocean-brand bg-ocean-light" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="w-full bg-ocean-brand text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition">
+                    Login
+                </button>
+            </form>
+            <div class="mt-4 text-center text-sm text-gray-600">
+                New user? <span onclick="alert('Registration is automatic on first order or contact admin.')" class="text-ocean-brand font-bold cursor-pointer">Create Account</span>
+            </div>
+            <div id="auth-error" class="mt-2 text-center text-red-500 text-sm hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS & CONFIG ---
+        const ADMIN_EMAIL = "wbstore.india@gmail.com";
+        const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dyt6fwvw0/image/upload";
+        const CLOUDINARY_PRESET = "Wb_mobile_products";
+        const RENDER_BACKEND = "https://west-bengal-mobile-store-backend.onrender.com";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBx724MefpWjw6KfUMX9o7BkygQ5xeD02k",
+            authDomain: "wb-mobile-store.firebaseapp.com",
+            projectId: "wb-mobile-store",
+            storageBucket: "wb-mobile-store.firebasestorage.app",
+            messagingSenderId: "54481231902",
+            appId: "1:54481231902:web:395ad38266e975fae6ce0f",
+            measurementId: "G-5R648HZ40T"
+        };
+
+        // --- INIT FIREBASE ---
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- STATE MANAGEMENT ---
+        const store = {
+            user: null,
+            isAdmin: false,
+            cart: JSON.parse(localStorage.getItem('wb_cart')) || [],
+            products: [],
+            banners: [],
+            settings: {}
+        };
+
+        // --- UI HELPERS ---
+        const ui = {
+            toast: (msg, type = 'info') => {
+                const container = document.getElementById('toast-container');
+                const div = document.createElement('div');
+                const bgColor = type === 'error' ? 'bg-red-500' : 'bg-ocean-brand';
+                div.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg mb-2 text-sm font-medium fade-in flex items-center justify-between`;
+                div.innerHTML = `<span>${msg}</span>`;
+                container.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            },
+            toggleAuthModal: (show) => {
+                const modal = document.getElementById('auth-modal');
+                if(show) modal.classList.remove('hidden');
+                else modal.classList.add('hidden');
+            },
+            showLoading: (el) => {
+                el.innerHTML = '<div class="loader mx-auto"></div>';
+            },
+            formatPrice: (price) => {
+                return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(price);
+            }
+        };
+
+        // --- SERVICES ---
+        const services = {
+            uploadImage: async (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_PRESET);
+                
+                try {
+                    const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+                    if(!res.ok) throw new Error("Upload failed");
+                    const data = await res.json();
+                    return data.secure_url;
+                } catch (e) {
+                    console.error(e);
+                    ui.toast('Image upload failed', 'error');
+                    return null;
+                }
+            },
+            fetchProducts: async () => {
+                const snap = await db.collection('products').where('active', '==', true).get();
+                store.products = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            },
+            fetchBanners: async () => {
+                const snap = await db.collection('banners').where('active', '==', true).get();
+                store.banners = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            }
+        };
+
+        // --- AUTH MANAGER ---
+        const authManager = {
+            init: () => {
+                auth.onAuthStateChanged(async (user) => {
+                    store.user = user;
+                    if (user) {
+                        store.isAdmin = (user.email === ADMIN_EMAIL);
+                        if (store.isAdmin) {
+                            document.getElementById('admin-link').classList.remove('hidden');
+                        }
+                    } else {
+                        store.isAdmin = false;
+                        document.getElementById('admin-link').classList.add('hidden');
+                    }
+                    // Refresh current view if needed
+                    router.navigate(location.hash.replace('#', '') || 'home');
+                });
+            },
+            login: async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const pass = document.getElementById('login-password').value;
+                const errDiv = document.getElementById('auth-error');
+                
+                try {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                    ui.toggleAuthModal(false);
+                    ui.toast('Login Successful');
+                } catch (error) {
+                    errDiv.innerText = error.message;
+                    errDiv.classList.remove('hidden');
+                }
+            },
+            handleProfileClick: () => {
+                if (store.user) router.navigate('profile');
+                else ui.toggleAuthModal(true);
+            },
+            logout: () => {
+                auth.signOut();
+                localStorage.removeItem('wb_cart');
+                store.cart = [];
+                cartManager.updateCount();
+                ui.toast('Logged out');
+                router.navigate('home');
+            }
+        };
+
+        // --- CART MANAGER ---
+        const cartManager = {
+            add: (product) => {
+                const existing = store.cart.find(p => p.id === product.id);
+                if (existing) existing.qty++;
+                else store.cart.push({...product, qty: 1});
+                cartManager.save();
+                ui.toast('Added to cart');
+            },
+            remove: (id) => {
+                store.cart = store.cart.filter(p => p.id !== id);
+                cartManager.save();
+                views.cart.render(); // Re-render cart if open
+            },
+            updateQty: (id, change) => {
+                const item = store.cart.find(p => p.id === id);
+                if (item) {
+                    item.qty += change;
+                    if (item.qty <= 0) cartManager.remove(id);
+                    else {
+                        cartManager.save();
+                        views.cart.render();
+                    }
+                }
+            },
+            save: () => {
+                localStorage.setItem('wb_cart', JSON.stringify(store.cart));
+                cartManager.updateCount();
+            },
+            updateCount: () => {
+                const count = store.cart.reduce((a, b) => a + b.qty, 0);
+                const el = document.getElementById('cart-count');
+                el.innerText = count;
+                el.classList.toggle('hidden', count === 0);
+            },
+            total: () => {
+                return store.cart.reduce((a, b) => a + (b.price * b.qty), 0);
+            }
+        };
+       // --- VIEWS ---
+        const views = {
+            home: {
+                render: async () => {
+                    await Promise.all([services.fetchBanners(), services.fetchProducts()]);
+                    const root = document.getElementById('app-root');
+                    
+                    // Banner HTML
+                    let bannerHtml = '';
+                    if (store.banners.length > 0) {
+                        // Just showing first banner for simplicity, in real app use a slider lib
+                        bannerHtml = `
+                            <div class="w-full h-48 md:h-64 bg-gray-200 overflow-hidden relative">
+                                <img src="${store.banners[0].image}" class="w-full h-full object-cover">
+                                <div class="absolute bottom-0 left-0 bg-gradient-to-t from-black/50 to-transparent w-full p-4">
+                                    <h2 class="text-white font-bold text-xl">${store.banners[0].title || ''}</h2>
+                                </div>
+                            </div>`;
+                    } else {
+                         bannerHtml = `
+                            <div class="w-full h-48 md:h-64 bg-gradient-to-r from-ocean-brand to-ocean-accent flex items-center justify-center text-white">
+                                <div class="text-center">
+                                    <h1 class="text-2xl font-bold">WB Mobile Store</h1>
+                                    <p class="text-sm opacity-90">Best Deals on Mobiles</p>
+                                </div>
+                            </div>`;
+                    }
+
+                    // Product Grid
+                    const productsHtml = store.products.map(p => `
+                        <div class="bg-white rounded-xl shadow-sm border border-ocean-sec overflow-hidden flex flex-col h-full" onclick="router.navigate('product/${p.id}')">
+                            <div class="h-40 bg-gray-50 flex items-center justify-center p-2">
+                                <img src="${p.image}" class="h-full object-contain" onerror="this.src='https://placehold.co/200?text=No+Image'">
+                            </div>
+                            <div class="p-3 flex-grow">
+                                <h3 class="font-medium text-sm text-gray-800 line-clamp-2">${p.name}</h3>
+                                <div class="mt-2 flex items-baseline space-x-2">
+                                    <span class="text-ocean-brand font-bold">${ui.formatPrice(p.price)}</span>
+                                    ${p.mrp ? `<span class="text-xs text-gray-400 line-through">${ui.formatPrice(p.mrp)}</span>` : ''}
+                                </div>
+                                ${p.stock > 0 ? '<span class="text-[10px] text-green-600 font-bold bg-green-100 px-1 rounded">In Stock</span>' : '<span class="text-[10px] text-red-500 font-bold">Out of Stock</span>'}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    root.innerHTML = `
+                        ${bannerHtml}
+                        <div class="max-w-7xl mx-auto px-4 py-6">
+                            <h2 class="text-lg font-bold text-ocean-dark mb-4 border-l-4 border-ocean-brand pl-2">Featured Products</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                ${productsHtml || '<div class="col-span-full text-center py-10 text-gray-500">No products found.</div>'}
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            product: {
+                render: async (id) => {
+                    const root = document.getElementById('app-root');
+                    const product = store.products.find(p => p.id === id); // Assume loaded, else fetch
+                    
+                    if (!product) {
+                        root.innerHTML = `<div class="p-10 text-center">Product not found <br><button class="text-ocean-brand mt-2" onclick="router.navigate('home')">Go Home</button></div>`;
+                        return;
+                    }
+
+                    root.innerHTML = `
+                        <div class="max-w-4xl mx-auto p-4 bg-white min-h-screen md:min-h-auto md:mt-4 md:rounded-xl md:shadow-lg">
+                            <button onclick="router.back()" class="mb-4 text-gray-500"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                            <div class="md:flex md:space-x-8">
+                                <div class="md:w-1/2 bg-ocean-light rounded-xl p-4 flex items-center justify-center mb-4 md:mb-0">
+                                    <img src="${product.image}" class="max-h-80 object-contain">
+                                </div>
+                                <div class="md:w-1/2">
+                                    <h1 class="text-2xl font-bold text-gray-800 mb-2">${product.name}</h1>
+                                    <div class="flex items-center space-x-3 mb-4">
+                                        <span class="text-3xl font-bold text-ocean-brand">${ui.formatPrice(product.price)}</span>
+                                        ${product.mrp ? `<span class="text-lg text-gray-400 line-through">${ui.formatPrice(product.mrp)}</span>` : ''}
+                                        ${product.mrp ? `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-bold">${Math.round(((product.mrp - product.price)/product.mrp)*100)}% OFF</span>` : ''}
+                                    </div>
+                                    <p class="text-gray-600 text-sm mb-6 leading-relaxed">${product.description || 'No description available.'}</p>
+                                    
+                                    <div class="flex space-x-3 fixed bottom-0 left-0 w-full p-3 bg-white border-t md:relative md:border-0 md:p-0 md:bg-transparent z-10">
+                                        <button onclick="cartManager.add({id: '${product.id}', name: '${product.name}', price: ${product.price}, image: '${product.image}'})" 
+                                            class="flex-1 bg-ocean-sec text-ocean-brand font-bold py-3 rounded-lg hover:bg-blue-100">
+                                            Add to Cart
+                                        </button>
+                                        <button onclick="cartManager.add({id: '${product.id}', name: '${product.name}', price: ${product.price}, image: '${product.image}'}); router.navigate('cart')" 
+                                            class="flex-1 bg-ocean-brand text-white font-bold py-3 rounded-lg hover:bg-blue-600 shadow-lg shadow-blue-200">
+                                            Buy Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            cart: {
+                render: () => {
+                    const root = document.getElementById('app-root');
+                    if(store.cart.length === 0) {
+                        root.innerHTML = `<div class="flex flex-col items-center justify-center h-[60vh] text-gray-500">
+                            <i class="fa-solid fa-cart-shopping text-6xl mb-4 text-ocean-sec"></i>
+                            <p>Your cart is empty</p>
+                            <button onclick="router.navigate('home')" class="mt-4 px-6 py-2 bg-ocean-brand text-white rounded-full">Shop Now</button>
+                        </div>`;
+                        return;
+                    }
+
+                    const itemsHtml = store.cart.map(item => `
+                        <div class="flex bg-white p-3 rounded-lg mb-3 shadow-sm border border-gray-100">
+                            <img src="${item.image}" class="w-20 h-20 object-contain bg-gray-50 rounded">
+                            <div class="ml-3 flex-grow">
+                                <h4 class="font-medium text-sm line-clamp-2">${item.name}</h4>
+                                <div class="flex justify-between items-center mt-2">
+                                    <span class="font-bold text-ocean-brand">${ui.formatPrice(item.price)}</span>
+                                    <div class="flex items-center bg-gray-100 rounded">
+                                        <button onclick="cartManager.updateQty('${item.id}', -1)" class="px-2 py-1 text-gray-600">-</button>
+                                        <span class="px-2 text-sm font-bold">${item.qty}</span>
+                                        <button onclick="cartManager.updateQty('${item.id}', 1)" class="px-2 py-1 text-gray-600">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    root.innerHTML = `
+                        <div class="max-w-2xl mx-auto p-4 pb-24">
+                            <h2 class="text-xl font-bold mb-4">My Cart</h2>
+                            ${itemsHtml}
+                            
+                            <!-- Bill Details -->
+                            <div class="bg-white p-4 rounded-lg shadow-sm mt-4">
+                                <h3 class="font-bold text-sm mb-3 text-gray-500 uppercase">Order Summary</h3>
+                                <div class="flex justify-between mb-2 text-sm"><span>Subtotal</span><span>${ui.formatPrice(cartManager.total())}</span></div>
+                                <div class="flex justify-between mb-2 text-sm"><span>Delivery</span><span class="text-green-600">Free</span></div>
+                                <div class="border-t border-dashed my-2"></div>
+                                <div class="flex justify-between font-bold text-lg"><span>Total</span><span>${ui.formatPrice(cartManager.total())}</span></div>
+                            </div>
+
+                            <!-- Checkout Button -->
+                            <div class="fixed bottom-14 md:bottom-4 left-0 w-full p-4 bg-white border-t md:relative md:border-0 md:bg-transparent md:p-0 md:mt-4">
+                                <button onclick="router.navigate('checkout')" class="w-full bg-ocean-brand text-white font-bold py-3 rounded-lg shadow-lg hover:bg-blue-600">
+                                    Proceed to Checkout
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            checkout: {
+                render: () => {
+                    if (!store.user) {
+                        ui.toast('Please login to checkout');
+                        ui.toggleAuthModal(true);
+                        return;
+                    }
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = `
+                        <div class="max-w-2xl mx-auto p-4">
+                            <h2 class="text-xl font-bold mb-4">Checkout</h2>
+                            <form id="order-form" onsubmit="views.checkout.submit(event)">
+                                <div class="bg-white p-4 rounded-lg shadow-sm mb-4">
+                                    <h3 class="font-bold mb-3 text-ocean-brand">Shipping Details</h3>
+                                    <input type="text" name="name" placeholder="Full Name" required class="w-full mb-3 p-2 border rounded bg-ocean-light">
+                                    <input type="tel" name="mobile" placeholder="Mobile Number" required class="w-full mb-3 p-2 border rounded bg-ocean-light">
+                                    <textarea name="address" placeholder="Full Address with Pincode" required class="w-full mb-3 p-2 border rounded bg-ocean-light h-24"></textarea>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg shadow-sm mb-4">
+                                    <h3 class="font-bold mb-3 text-ocean-brand">Payment Method</h3>
+                                    <label class="flex items-center mb-3 p-2 border rounded cursor-pointer">
+                                        <input type="radio" name="payment" value="cod" checked class="mr-3">
+                                        <span class="font-medium">Cash on Delivery (COD)</span>
+                                    </label>
+                                    <label class="flex items-center p-2 border rounded cursor-pointer">
+                                        <input type="radio" name="payment" value="upi" class="mr-3" onclick="document.getElementById('upi-section').classList.remove('hidden')">
+                                        <span class="font-medium">UPI Payment</span>
+                                    </label>
+                                    
+                                    <div id="upi-section" class="hidden mt-3 p-3 bg-blue-50 rounded border border-blue-100">
+                                        <p class="text-sm text-gray-600 mb-2">Scan QR or pay to <strong>wbstore@upi</strong></p>
+                                        <input type="text" name="utr" placeholder="Enter UTR / Transaction ID" class="w-full p-2 border rounded bg-white">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full bg-ocean-brand text-white font-bold py-3 rounded-lg shadow-md">
+                                    Place Order (${ui.formatPrice(cartManager.total())})
+                                </button>
+                            </form>
+                        </div>
+                    `;
+                },
+                submit: async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button');
+                    const originalText = btn.innerText;
+                    btn.disabled = true;
+                    btn.innerText = "Placing Order...";
+
+                    const formData = new FormData(e.target);
+                    const orderData = {
+                        userId: store.user.uid,
+                        userEmail: store.user.email,
+                        customerName: formData.get('name'),
+                        mobile: formData.get('mobile'),
+                        address: formData.get('address'),
+                        paymentMethod: formData.get('payment'),
+                        paymentId: formData.get('utr') || '',
+                        items: store.cart,
+                        total: cartManager.total(),
+                        status: 'Pending',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    try {
+                        await db.collection('orders').add(orderData);
+                        // Clear Cart
+                        store.cart = [];
+                        cartManager.save();
+                        
+                        // Send fake email notification logic here if backend existed
+                        
+                        ui.toast('Order Placed Successfully!');
+                        router.navigate('orders');
+                    } catch (err) {
+                        console.error(err);
+                        ui.toast('Order failed. Try again.', 'error');
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                    }
+                }
+            },
+            orders: {
+                render: async () => {
+                    if(!store.user) { ui.toggleAuthModal(true); return; }
+                    const root = document.getElementById('app-root');
+                    ui.showLoading(root);
+
+                    const snap = await db.collection('orders')
+                        .where('userId', '==', store.user.uid)
+                        .orderBy('createdAt', 'desc')
+                        .get();
+
+                    if(snap.empty) {
+                        root.innerHTML = `<div class="p-8 text-center text-gray-500">No orders found.</div>`;
+                        return;
+                    }
+
+                    const ordersHtml = snap.docs.map(doc => {
+                        const o = doc.data();
+                        const date = o.createdAt ? o.createdAt.toDate().toLocaleDateString() : 'Just now';
+                        const statusColor = {
+                            'Pending': 'text-yellow-600 bg-yellow-100',
+                            'Approved': 'text-blue-600 bg-blue-100',
+                            'Shipped': 'text-purple-600 bg-purple-100',
+                            'Delivered': 'text-green-600 bg-green-100',
+                            'Rejected': 'text-red-600 bg-red-100'
+                        }[o.status] || 'text-gray-600 bg-gray-100';
+
+                        return `
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-ocean-sec mb-4">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <span class="text-xs text-gray-500">Order ID: ...${doc.id.slice(-6)}</span>
+                                        <p class="font-bold text-sm text-gray-800">${date}</p>
+                                    </div>
+                                    <span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${o.status}</span>
+                                </div>
+                                <div class="border-t border-dashed my-2"></div>
+                                ${o.items.map(i => `<div class="text-sm text-gray-600">${i.qty}x ${i.name}</div>`).join('')}
+                                <div class="mt-2 text-right font-bold text-ocean-brand">${ui.formatPrice(o.total)}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    root.innerHTML = `<div class="max-w-2xl mx-auto p-4"><h2 class="text-xl font-bold mb-4">My Orders</h2>${ordersHtml}</div>`;
+                }
+            },
+            admin: {
+                render: async () => {
+                    if (!store.isAdmin) {
+                        router.navigate('home');
+                        return;
+                    }
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = `
+                        <div class="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+                            <!-- Sidebar -->
+                            <div class="bg-white w-full md:w-64 border-r p-4 hidden md:block">
+                                <h2 class="text-xl font-bold text-ocean-brand mb-6">Admin Panel</h2>
+                                <button onclick="views.admin.showSection('dashboard')" class="block w-full text-left p-2 hover:bg-ocean-light rounded mb-1">Dashboard</button>
+                                <button onclick="views.admin.showSection('products')" class="block w-full text-left p-2 hover:bg-ocean-light rounded mb-1">Products</button>
+                                <button onclick="views.admin.showSection('orders')" class="block w-full text-left p-2 hover:bg-ocean-light rounded mb-1">Orders</button>
+                            </div>
+                                        <!-- Mobile Tabs -->
+                            <div class="md:hidden flex overflow-x-auto bg-white border-b p-2 space-x-2">
+                                <button onclick="views.admin.showSection('dashboard')" class="px-3 py-1 bg-ocean-light rounded text-sm whitespace-nowrap">Dashboard</button>
+                                <button onclick="views.admin.showSection('products')" class="px-3 py-1 bg-ocean-light rounded text-sm whitespace-nowrap">Products</button>
+                                <button onclick="views.admin.showSection('orders')" class="px-3 py-1 bg-ocean-light rounded text-sm whitespace-nowrap">Orders</button>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-grow p-4" id="admin-content">
+                                <!-- Dynamic Admin Content -->
+                            </div>
+                        </div>
+                    `;
+                    views.admin.showSection('dashboard');
+                },
+                showSection: async (section) => {
+                    const container = document.getElementById('admin-content');
+                    ui.showLoading(container);
+
+                    if (section === 'dashboard') {
+                        // Dummy stats for demo + Real calculations
+                        const ordersSnap = await db.collection('orders').get();
+                        const totalOrders = ordersSnap.size;
+                        const pending = ordersSnap.docs.filter(d => d.data().status === 'Pending').length;
+                        const revenue = ordersSnap.docs.reduce((acc, d) => acc + (d.data().total || 0), 0);
+
+                        container.innerHTML = `
+                            <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-white p-4 rounded shadow border-l-4 border-ocean-brand">
+                                    <div class="text-gray-500 text-sm">Total Orders</div>
+                                    <div class="text-2xl font-bold">${totalOrders}</div>
+                                </div>
+                                <div class="bg-white p-4 rounded shadow border-l-4 border-yellow-500">
+                                    <div class="text-gray-500 text-sm">Pending</div>
+                                    <div class="text-2xl font-bold">${pending}</div>
+                                </div>
+                                <div class="bg-white p-4 rounded shadow border-l-4 border-green-500">
+                                    <div class="text-gray-500 text-sm">Revenue</div>
+                                    <div class="text-xl font-bold">${ui.formatPrice(revenue)}</div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (section === 'products') {
+                        container.innerHTML = `
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-bold">Product Management</h2>
+                                <button onclick="views.admin.addProductForm()" class="bg-ocean-brand text-white px-4 py-2 rounded shadow hover:bg-blue-600">+ Add Product</button>
+                            </div>
+                            <div class="bg-white rounded shadow overflow-hidden">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-ocean-light">
+                                        <tr>
+                                            <th class="p-3">Image</th>
+                                            <th class="p-3">Name</th>
+                                            <th class="p-3">Price</th>
+                                            <th class="p-3">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        ${store.products.map(p => `
+                                            <tr>
+                                                <td class="p-3"><img src="${p.image}" class="w-10 h-10 object-cover rounded"></td>
+                                                <td class="p-3 font-medium">${p.name}</td>
+                                                <td class="p-3">${p.price}</td>
+                                                <td class="p-3">
+                                                    <button onclick="views.admin.deleteProduct('${p.id}')" class="text-red-500 hover:text-red-700">Delete</button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    } else if (section === 'orders') {
+                        const snap = await db.collection('orders').orderBy('createdAt', 'desc').limit(20).get();
+                        const orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                        
+                        container.innerHTML = `
+                            <h2 class="text-xl font-bold mb-4">Order Management</h2>
+                            <div class="space-y-4">
+                                ${orders.map(o => `
+                                    <div class="bg-white p-4 rounded shadow border border-gray-200">
+                                        <div class="flex justify-between mb-2">
+                                            <span class="font-bold text-sm">#${o.id.slice(0,5)} - ${o.customerName}</span>
+                                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">${o.paymentMethod}</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600 mb-2">
+                                            ${o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+                                        </div>
+                                        <div class="flex justify-between items-center mt-3">
+                                            <span class="font-bold text-ocean-brand">${ui.formatPrice(o.total)}</span>
+                                            <select onchange="views.admin.updateStatus('${o.id}', this.value)" class="border p-1 rounded text-sm ${o.status === 'Pending' ? 'text-red-500' : 'text-green-600'}">
+                                                <option value="Pending" ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                                <option value="Approved" ${o.status === 'Approved' ? 'selected' : ''}>Approved</option>
+                                                <option value="Shipped" ${o.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                                <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                },
+                addProductForm: () => {
+                    const container = document.getElementById('admin-content');
+                    container.innerHTML = `
+                        <h2 class="text-xl font-bold mb-4">Add New Product</h2>
+                        <form onsubmit="views.admin.submitProduct(event)" class="bg-white p-6 rounded shadow max-w-lg">
+                            <input type="text" name="name" placeholder="Product Name" required class="w-full mb-3 p-2 border rounded">
+                            <textarea name="description" placeholder="Description" class="w-full mb-3 p-2 border rounded"></textarea>
+                            <div class="flex space-x-3 mb-3">
+                                <input type="number" name="price" placeholder="Sale Price" required class="w-1/2 p-2 border rounded">
+                                <input type="number" name="mrp" placeholder="MRP (Optional)" class="w-1/2 p-2 border rounded">
+                            </div>
+                            <input type="number" name="stock" placeholder="Stock Quantity" required class="w-full mb-3 p-2 border rounded">
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium mb-1">Product Image</label>
+                                <input type="file" id="prod-img" accept="image/*" required class="w-full text-sm">
+                            </div>
+                            <button type="submit" class="w-full bg-ocean-brand text-white py-2 rounded font-bold">Save Product</button>
+                            <button type="button" onclick="views.admin.showSection('products')" class="w-full mt-2 text-gray-500">Cancel</button>
+                        </form>
+                    `;
+                },
+                submitProduct: async (e) => {
+                    e.preventDefault();
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    btn.innerText = "Uploading...";
+                    btn.disabled = true;
+
+                    const file = document.getElementById('prod-img').files[0];
+                    const imageUrl = await services.uploadImage(file);
+
+                    if (!imageUrl) {
+                        btn.disabled = false;
+                        btn.innerText = "Save Product";
+                        return;
+                    }
+
+                    const formData = new FormData(e.target);
+                    const productData = {
+                        name: formData.get('name'),
+                        description: formData.get('description'),
+                        price: Number(formData.get('price')),
+                        mrp: Number(formData.get('mrp')) || 0,
+                        stock: Number(formData.get('stock')),
+                        image: imageUrl,
+                        active: true,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    await db.collection('products').add(productData);
+                    ui.toast('Product Added');
+                    store.products = []; // Force refresh
+                    await services.fetchProducts();
+                    views.admin.showSection('products');
+                },
+                deleteProduct: async (id) => {
+                    if(confirm('Delete this product?')) {
+                        await db.collection('products').doc(id).update({active: false});
+                        ui.toast('Product Deleted');
+                        store.products = []; 
+                        await services.fetchProducts();
+                        views.admin.showSection('products');
+                    }
+                },
+                updateStatus: async (id, status) => {
+                    await db.collection('orders').doc(id).update({status: status});
+                    ui.toast('Order Status Updated');
+                }
+            },
+            profile: {
+                render: () => {
+                    if(!store.user) { router.navigate('home'); return; }
+                    const root = document.getElementById('app-root');
+                    root.innerHTML = `
+                        <div class="max-w-md mx-auto p-6 bg-white m-4 rounded-xl shadow-sm">
+                            <div class="text-center mb-6">
+                                <div class="w-20 h-20 bg-ocean-light rounded-full mx-auto flex items-center justify-center text-ocean-brand text-3xl font-bold mb-3">
+                                    ${store.user.email[0].toUpperCase()}
+                                </div>
+                                <h2 class="text-xl font-bold text-gray-800">${store.user.email}</h2>
+                                ${store.isAdmin ? '<span class="bg-blue-600 text-white text-xs px-2 py-1 rounded">ADMINISTRATOR</span>' : '<span class="text-gray-500 text-sm">Customer</span>'}
+                            </div>
+
+                            <div class="space-y-3">
+                                <button onclick="router.navigate('orders')" class="w-full flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-ocean-light">
+                                    <span>My Orders</span>
+                                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                                </button>
+                                <button onclick="router.navigate('cart')" class="w-full flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-ocean-light">
+                                    <span>My Cart</span>
+                                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                                </button>
+                                ${store.isAdmin ? `
+                                <button onclick="router.navigate('admin')" class="w-full flex justify-between items-center p-4 bg-blue-50 rounded-lg text-blue-700 font-bold border border-blue-200">
+                                    <span>Open Admin Dashboard</span>
+                                    <i class="fa-solid fa-lock"></i>
+                                </button>` : ''}
+                            </div>
+
+                            <button onclick="authManager.logout()" class="w-full mt-8 border border-red-200 text-red-500 py-3 rounded-lg hover:bg-red-50">
+                                Logout
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // --- ROUTER ---
+        const router = {
+            navigate: (hash) => {
+                location.hash = hash;
+                router.handle();
+            },
+            back: () => {
+                history.back();
+            },
+            handle: () => {
+                const hash = location.hash.slice(1) || 'home';
+                cartManager.updateCount();
+
+                // Highlight Active Nav
+                document.querySelectorAll('.nav-icon').forEach(i => i.classList.remove('text-ocean-brand'));
+                if(hash === 'home') document.getElementById('nav-home')?.classList.add('text-ocean-brand');
+                if(hash === 'orders') document.getElementById('nav-orders')?.classList.add('text-ocean-brand');
+                if(hash === 'profile') document.getElementById('nav-profile')?.classList.add('text-ocean-brand');
+
+                // Route Logic
+                if (hash === 'home') views.home.render();
+                else if (hash.startsWith('product/')) views.product.render(hash.split('/')[1]);
+                else if (hash === 'cart') views.cart.render();
+                else if (hash === 'checkout') views.checkout.render();
+                else if (hash === 'orders') views.orders.render();
+                else if (hash === 'profile') views.profile.render();
+                else if (hash === 'admin') views.admin.render();
+                else views.home.render();
+
+                window.scrollTo(0, 0);
+            }
+        };
+
+        // --- INIT APP ---
+        window.addEventListener('load', () => {
+            authManager.init();
+            router.handle();
+        });
+        window.addEventListener('hashchange', router.handle);
+    </script>
+</body>
+</html>
