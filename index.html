@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WB Mobile Store - Professional</title>
+    
+    <!-- PWA Setup -->
+    <meta name="theme-color" content="#5080BE">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiV0IgTW9iaWxlIFN0b3JlIiwic2hvcnRfbmFtZSI6IldCIFN0b3JlIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI0UwRjJGQyIsInRoZW1lX2NvbG9yIjoiIzUwODBCRSIsImljb25zIjpbeyJzcmMiOiJodHRwczovL2ltZy5pY29uczguY29tL2Nsb3VkLzEwMC9zaG9wLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
+
+    <!-- Tailwind CSS (Design) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Toastify (Notifications) -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Font & Animations */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #E0F2FC; }
+        
+        /* Hide Scrollbar but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5080BE;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Bottom Nav Active State */
+        .nav-active { color: #5080BE; font-weight: bold; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- LOADING SCREEN -->
+    <div id="app-loader" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center">
+        <div class="w-20 h-20 bg-gradient-to-br from-[#5080BE] to-[#7EBBDA] rounded-xl flex items-center justify-center text-white text-3xl font-bold shadow-2xl mb-4">WB</div>
+        <div class="loader"></div>
+        <p class="mt-4 text-[#5080BE] font-semibold">Starting Store...</p>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="hidden pb-20 md:pb-0 min-h-screen relative">
+        
+        <!-- NAVBAR (Sticky Top) -->
+        <nav class="fixed top-0 w-full z-40 bg-white shadow-md">
+            <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+                <!-- Logo -->
+                <div onclick="router('home')" class="flex items-center gap-2 cursor-pointer">
+                    <div class="w-8 h-8 rounded bg-[#5080BE] flex items-center justify-center text-white font-bold text-sm">WB</div>
+                    <span class="font-bold text-[#5080BE] text-lg hidden sm:block">Mobile Store</span>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="flex-1 relative">
+                    <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="Search mobiles..." class="w-full bg-gray-100 text-sm rounded-full py-2 pl-9 pr-4 focus:ring-2 focus:ring-[#5080BE] outline-none transition">
+                    <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-400"></i>
+                </div>
+
+                <!-- Desktop Icons / Admin Link -->
+                <div class="flex items-center gap-4">
+                    <div id="adminLink" class="hidden cursor-pointer text-[#5080BE]" onclick="router('admin')">
+                        <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+                    </div>
+                    <div class="relative cursor-pointer" onclick="router('cart')">
+                        <i data-lucide="shopping-cart" class="w-6 h-6 text-gray-600 hover:text-[#5080BE]"></i>
+                        <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full hidden">0</span>
+                    </div>
+                    <div id="authBtnNav" class="cursor-pointer">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- CONTENT AREA (Dynamic) -->
+        <main id="mainContent" class="pt-20 px-2 md:px-0 max-w-4xl mx-auto fade-in">
+            <!-- Views will be injected here by JavaScript -->
+        </main>
+
+        <!-- BOTTOM NAVIGATION (Mobile Only) -->
+        <div class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-3 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <button onclick="router('home')" id="nav-home" class="flex flex-col items-center gap-1 text-gray-400 transition">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px]">Home</span>
+            </button>
+            <button onclick="router('cart')" id="nav-cart" class="flex flex-col items-center gap-1 text-gray-400 transition relative">
+                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                <span id="mobileCartCount" class="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+                <span class="text-[10px]">Cart</span>
+            </button>
+            <button onclick="router('orders')" id="nav-orders" class="flex flex-col items-center gap-1 text-gray-400 transition">
+                <i data-lucide="package" class="w-5 h-5"></i>
+                <span class="text-[10px]">Orders</span>
+            </button>
+            <button onclick="handleProfileClick()" id="nav-profile" class="flex flex-col items-center gap-1 text-gray-400 transition">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="text-[10px]">Account</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-fadeIn">
+            <div class="bg-[#5080BE] p-6 text-center">
+                <h2 class="text-white text-2xl font-bold">Welcome Back</h2>
+                <p class="text-blue-100 text-sm">Login to continue shopping</p>
+            </div>
+            <div class="p-6">
+                <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                    <div id="registerFields" class="hidden space-y-3 mb-3">
+                        <input type="text" name="name" placeholder="Full Name" class="w-full p-3 border rounded-lg bg-gray-50 text-sm focus:border-[#5080BE] outline-none">
+                        <input type="tel" name="mobile" placeholder="Mobile Number" class="w-full p-3 border rounded-lg bg-gray-50 text-sm focus:border-[#5080BE] outline-none">
+                    </div>
+                    <input type="email" name="email" placeholder="Email Address" required class="w-full p-3 border rounded-lg bg-gray-50 text-sm mb-3 focus:border-[#5080BE] outline-none">
+                    <input type="password" name="password" placeholder="Password" required class="w-full p-3 border rounded-lg bg-gray-50 text-sm mb-4 focus:border-[#5080BE] outline-none">
+                    
+                    <button type="submit" id="authSubmitBtn" class="w-full bg-[#5080BE] text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition">Login</button>
+                </form>
+                <div class="mt-4 text-center text-sm">
+                    <span id="authToggleText" class="text-gray-500">New user? </span>
+                    <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-[#5080BE] font-bold">Create Account</button>
+                </div>
+                <button onclick="closeModal('authModal')" class="absolute top-4 right-4 text-white hover:text-gray-200">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module">
+        // --- 1. CONFIGURATION ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, serverTimestamp, onSnapshot, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBx724MefpWjw6KfUMX9o7BkygQ5xeD02k",
+            authDomain: "wb-mobile-store.firebaseapp.com",
+            projectId: "wb-mobile-store",
+            storageBucket: "wb-mobile-store.firebasestorage.app",
+            messagingSenderId: "54481231902",
+            appId: "1:54481231902:web:395ad38266e975fae6ce0f",
+            measurementId: "G-5R648HZ40T"
+        };
+
+        const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dyt6fwvw0/image/upload";
+        const CLOUDINARY_PRESET = "Wb_mobile_products";
+        const ADMIN_EMAIL = "wbstore.india@gmail.com";
+
+        // Init Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- 2. GLOBAL STATE ---
+        let state = {
+            user: null,
+            products: [],
+            banners: [],
+            cart: JSON.parse(localStorage.getItem('wb_cart')) || [],
+            orders: [],
+            adminOrders: [],
+            currentView: 'home',
+            authMode: 'login', // login or register
+            selectedProduct: null
+        };
+
+        // --- 3. HELPER FUNCTIONS ---
+        const $ = (id) => document.getElementById(id);
+        
+        const showToast = (msg, type = "info") => {
+            Toastify({
+                text: msg,
+                duration: 3000,
+                gravity: "bottom",
+                position: "center",
+                style: {
+                    background: type === "error" ? "#EF4444" : "#5080BE",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                }
+            }).showToast();
+        };
+
+        const uploadImage = async (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_PRESET);
+            try {
+                const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+                const data = await res.json();
+                return data.secure_url;
+            } catch (error) {
+                console.error("Upload failed", error);
+                showToast("Image upload failed", "error");
+                return null;
+            }
+        };
+
+        const formatPrice = (price) => "₹" + price.toLocaleString('en-IN');
+
+        // --- 4. CORE APP LOGIC ---
+
+        // Initialize App
+        const init = () => {
+            // Auth Listener
+            onAuthStateChanged(auth, (user) => {
+                state.user = user;
+                updateAuthUI();
+                fetchData();
+                $('app-loader').classList.add('hidden');
+                $('app').classList.remove('hidden');
+                if (state.currentView === 'home') router('home'); // Refresh view
+            });
+        };
+
+        // Fetch Data (Realtime)
+        const fetchData = () => {
+            // Products
+            onSnapshot(query(collection(db, "products"), orderBy("createdAt", "desc")), (snap) => {
+                state.products = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if (state.currentView === 'home') renderHome();
+                if (state.currentView === 'admin') renderAdmin();
+            });
+
+            // Banners
+            onSnapshot(query(collection(db, "banners"), orderBy("createdAt", "desc")), (snap) => {
+                state.banners = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                if (state.currentView === 'home') renderHome();
+            });
+
+            // Orders (if logged in)
+            if (state.user) {
+                onSnapshot(query(collection(db, "orders"), where("userId", "==", state.user.uid), orderBy("createdAt", "desc")), (snap) => {
+                    state.orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    if (state.currentView === 'orders') renderOrders();
+                });
+                
+                // Admin Orders
+                if (state.user.email === ADMIN_EMAIL) {
+                    onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc")), (snap) => {
+                        state.adminOrders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                        if (state.currentView === 'admin') renderAdmin();
+                    });
+                }
+            }
+        };
+
+        // Update UI based on Auth
+        const updateAuthUI = () => {
+            const btn = $('authBtnNav');
+            const adminLink = $('adminLink');
+            
+            if (state.user) {
+                btn.innerHTML = `<div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#5080BE] font-bold border border-blue-200">${state.user.email[0].toUpperCase()}</div>`;
+                btn.onclick = () => router('profile');
+                
+                if (state.user.email === ADMIN_EMAIL) {
+                    adminLink.classList.remove('hidden');
+                } else {
+                    adminLink.classList.add('hidden');
+                }
+            } else {
+                btn.innerHTML = `<button class="bg-[#5080BE] text-white px-4 py-1.5 rounded-full text-xs font-bold shadow hover:bg-blue-700 transition">Login</button>`;
+                btn.onclick = () => openAuthModal();
+                adminLink.classList.add('hidden');
+            }
+        };
+
+        // Router
+        window.router = (view, data = null) => {
+            state.currentView = view;
+            const main = $('mainContent');
+            
+            // Update Bottom Nav
+            document.querySelectorAll('div.fixed > button').forEach(b => b.classList.remove('nav-active'));
+            if(view === 'home') $('nav-home').classList.add('nav-active');
+            if(view === 'cart') $('nav-cart').classList.add('nav-active');
+            if(view === 'orders') $('nav-orders').classList.add('nav-active');
+            if(view === 'profile') $('nav-profile').classList.add('nav-active');
+
+            // Route Logic
+            switch (view) {
+                case 'home': renderHome(); break;
+                case 'product': state.selectedProduct = data; renderProduct(data); break;
+                case 'cart': renderCart(); break;
+                case 'checkout': renderCheckout(); break;
+                case 'orders': renderOrders(); break;
+                case 'profile': renderProfile(); break;
+                case 'admin': 
+                    if (state.user?.email === ADMIN_EMAIL) renderAdmin(); 
+                    else router('home'); 
+                    break;
+            }
+            // Scroll to top
+            window.scrollTo(0, 0);
+        };
+
+        // --- 5. RENDER FUNCTIONS (THE UI) ---
+
+        const renderHome = () => {
+            const bannerHTML = state.banners.length > 0 
+                ? `<div class="relative w-full h-48 md:h-72 rounded-xl overflow-hidden shadow-lg mb-6 group">
+                     <img src="${state.banners[0].imageUrl}" class="w-full h-full object-cover animate-fadeIn">
+                     <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                   </div>`
+                : `<div class="w-full h-48 rounded-xl bg-gradient-to-r from-[#5080BE] to-[#7EBBDA] flex items-center justify-center text-white mb-6 shadow-lg">
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold">Welcome to WB Store</h2>
+                        <p class="text-sm opacity-90">Best Mobiles & Accessories</p>
+                    </div>
+                   </div>`;
+
+            // Categories
+            const cats = [
+                {name: 'Mobiles', icon: 'smartphone'},
+                {name: 'Audio', icon: 'headphones'},
+                {name: 'Watches', icon: 'watch'},
+                {name: 'Chargers', icon: 'battery-charging'}
+            ];
+            
+            let catHTML = `<div class="flex justify-between px-2 mb-6">
+                ${cats.map(c => `
+                    <div class="flex flex-col items-center gap-2 cursor-pointer transition hover:scale-105" onclick="filterCat('${c.name}')">
+                        <div class="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center text-[#5080BE] border border-blue-50">
+                            <i data-lucide="${c.icon}" class="w-7 h-7"></i>
+                        </div>
+                        <span class="text-xs font-medium text-gray-700">${c.name}</span>
+                    </div>
+                `).join('')}
+            </div>`;
+
+      // Products Grid
+            let prodHTML = `<h2 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="w-1 h-6 bg-[#5080BE] rounded-full"></span> New Arrivals</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 pb-20">`;
+            
+            if (state.products.length === 0) {
+                prodHTML += `<div class="col-span-2 text-center py-10 text-gray-400">No products found.</div>`;
+            } else {
+                state.products.forEach(p => {
+                    prodHTML += `
+                    <div onclick="openProduct('${p.id}')" class="bg-white rounded-xl shadow-sm p-3 flex flex-col gap-2 cursor-pointer hover:shadow-lg transition border border-gray-100">
+                        <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center relative">
+                            <img src="${p.imageUrl}" class="w-full h-full object-contain p-2" loading="lazy">
+                            ${p.stock < 1 ? '<span class="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded">Out of Stock</span>' : ''}
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-[#5080BE] bg-blue-50 w-fit px-1.5 py-0.5 rounded mb-1">${p.brand}</div>
+                            <h3 class="font-medium text-sm text-gray-800 line-clamp-1">${p.name}</h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="font-bold text-base text-[#5080BE]">${formatPrice(p.price)}</span>
+                                ${p.mrp ? `<span class="text-xs text-gray-400 line-through">${formatPrice(p.mrp)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            }
+            prodHTML += `</div>`;
+
+            $('mainContent').innerHTML = `<div class="animate-fadeIn">${bannerHTML}${catHTML}${prodHTML}</div>`;
+            lucide.createIcons();
+        };
+
+        const renderProduct = (p) => {
+            const html = `
+            <div class="bg-white min-h-screen animate-fadeIn pb-24">
+                <!-- Header -->
+                <div class="flex items-center gap-2 p-2 mb-2 text-gray-500 cursor-pointer" onclick="router('home')">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+                </div>
+                
+                <!-- Image -->
+                <div class="w-full h-80 bg-white flex items-center justify-center p-6 border-b">
+                    <img src="${p.imageUrl}" class="max-h-full max-w-full object-contain drop-shadow-lg">
+                </div>
+
+                <!-- Info -->
+                <div class="p-4">
+                    <div class="text-[#5080BE] text-xs font-bold bg-blue-50 w-fit px-2 py-1 rounded mb-2">${p.brand}</div>
+                    <h1 class="text-xl font-bold text-gray-800 mb-2">${p.name}</h1>
+                    <div class="flex items-end gap-3 mb-6">
+                        <span class="text-3xl font-bold text-[#5080BE]">${formatPrice(p.price)}</span>
+                        ${p.mrp ? `<span class="text-lg text-gray-400 line-through">${formatPrice(p.mrp)}</span>` : ''}
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl mb-6">
+                        <h3 class="font-bold text-sm mb-2 text-gray-700">Description</h3>
+                        <p class="text-sm text-gray-600 leading-relaxed">${p.description}</p>
+                    </div>
+
+                    <!-- Reviews -->
+                    <div class="mb-6">
+                        <h3 class="font-bold text-lg mb-3">Customer Reviews</h3>
+                        <div class="space-y-3 mb-4">
+                            ${p.reviews && p.reviews.length > 0 ? p.reviews.map(r => `
+                                <div class="border p-3 rounded-lg text-sm bg-gray-50">
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-bold text-gray-800">${r.userName}</span>
+                                        <div class="text-yellow-500 flex text-xs">
+                                            ${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}
+                                        </div>
+                                    </div>
+                                    <p class="text-gray-600">${r.text}</p>
+                                    ${r.imageUrl ? `<img src="${r.imageUrl}" class="w-16 h-16 rounded mt-2 object-cover">` : ''}
+                                </div>
+                            `).join('') : '<p class="text-gray-400 text-sm">No reviews yet.</p>'}
+                        </div>
+                        
+                        ${state.user ? `
+                        <form onsubmit="handleAddReview(event, '${p.id}')" class="border rounded-xl p-3 bg-blue-50">
+                            <div class="text-sm font-bold mb-2 text-[#5080BE]">Write a Review</div>
+                            <textarea name="text" required placeholder="How is the product?" class="w-full p-2 rounded border text-sm mb-2"></textarea>
+                            <div class="flex gap-2 mb-2">
+                                <select name="rating" class="p-1 rounded text-sm border">
+                                    <option value="5">5 ★★★★★</option>
+                                    <option value="4">4 ★★★★</option>
+                                    <option value="3">3 ★★★</option>
+                                    <option value="2">2 ★★</option>
+                                    <option value="1">1 ★</option>
+                                </select>
+                                <input type="file" name="image" class="text-xs w-full bg-white p-1 rounded border">
+                            </div>
+                            <button class="w-full bg-[#5080BE] text-white py-1.5 rounded text-sm font-bold">Post Review</button>
+                        </form>
+                        ` : `<button onclick="openAuthModal()" class="w-full border border-[#5080BE] text-[#5080BE] py-2 rounded-lg font-bold text-sm">Login to Review</button>`}
+                    </div>
+                </div>
+
+                <!-- Sticky Footer -->
+                <div class="fixed bottom-0 left-0 w-full bg-white p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] flex gap-3 z-30 md:static md:shadow-none">
+                    <button onclick="addToCart('${p.id}')" class="flex-1 py-3 border-2 border-[#5080BE] text-[#5080BE] font-bold rounded-lg hover:bg-blue-50">Add to Cart</button>
+                    <button onclick="buyNow('${p.id}')" class="flex-1 py-3 bg-[#5080BE] text-white font-bold rounded-lg shadow-lg hover:opacity-90">Buy Now</button>
+                </div>
+            </div>`;
+            $('mainContent').innerHTML = html;
+            lucide.createIcons();
+        };
+
+        const renderCart = () => {
+            if (state.cart.length === 0) {
+                $('mainContent').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-[60vh] animate-fadeIn">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i data-lucide="shopping-cart" class="w-10 h-10 text-gray-300"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-700">Your Cart is Empty</h2>
+                    <button onclick="router('home')" class="mt-4 text-[#5080BE] font-bold">Start Shopping</button>
+                </div>`;
+            } else {
+                const total = state.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+                let html = `
+                <div class="animate-fadeIn pb-24">
+                    <h2 class="text-xl font-bold mb-4">My Cart (${state.cart.length})</h2>
+                    <div class="space-y-3 mb-6">
+                        ${state.cart.map(item => `
+                            <div class="bg-white p-3 rounded-xl shadow-sm flex gap-3 items-center">
+                                <img src="${item.imageUrl}" class="w-16 h-16 bg-gray-50 rounded object-contain">
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-sm text-gray-800 line-clamp-1">${item.name}</h3>
+                                    <div class="text-[#5080BE] font-bold text-sm">${formatPrice(item.price)}</div>
+                                    <div class="flex items-center gap-3 mt-2">
+                                        <button onclick="updateQty('${item.id}', -1)" class="w-6 h-6 bg-gray-100 rounded flex items-center justify-center font-bold text-gray-600">-</button>
+                                        <span class="text-sm font-bold">${item.qty}</span>
+                                        <button onclick="updateQty('${item.id}', 1)" class="w-6 h-6 bg-gray-100 rounded flex items-center justify-center font-bold text-gray-600">+</button>
+                                    </div>
+                                </div>
+                                <button onclick="removeFromCart('${item.id}')" class="text-red-400 p-2"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="bg-white p-4 rounded-xl shadow-lg sticky bottom-20 border border-blue-100">
+                        <div class="flex justify-between text-gray-600 text-sm mb-2">
+                            <span>Subtotal</span>
+                            <span>${formatPrice(total)}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600 text-sm mb-4">
+                            <span>Delivery</span>
+                            <span class="text-green-600 font-bold">Free</span>
+                        </div>
+                        <div class="border-t pt-3 flex justify-between font-bold text-xl text-gray-900 mb-4">
+                            <span>Total</span>
+                            <span>${formatPrice(total)}</span>
+                        </div>
+                        <button onclick="router('checkout')" class="w-full bg-[#5080BE] text-white py-3 rounded-lg font-bold shadow hover:bg-[#3e6ca8] transition">Proceed to Checkout</button>
+                    </div>
+                </div>`;
+                $('mainContent').innerHTML = html;
+            }
+            lucide.createIcons();
+        };
+
+        const renderCheckout = () => {
+            if(!state.user) { openAuthModal(); return; }
+            const total = state.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            
+            const html = `
+            <div class="animate-fadeIn pb-20">
+                <div class="flex items-center gap-2 mb-4 text-gray-500 cursor-pointer" onclick="router('cart')">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to Cart
+                </div>
+                <h2 class="text-2xl font-bold text-[#5080BE] mb-6">Checkout</h2>
+                
+                <form onsubmit="handlePlaceOrder(event)" class="space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm space-y-3">
+                        <h3 class="font-bold border-b pb-2 mb-2 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i> Shipping Address</h3>
+                        <input name="name" required placeholder="Full Name" value="${state.user.displayName || ''}" class="w-full border p-2 rounded text-sm outline-none focus:border-[#5080BE]">
+                        <input name="mobile" required placeholder="Mobile Number" type="tel" class="w-full border p-2 rounded text-sm outline-none focus:border-[#5080BE]">
+                        <input name="address" required placeholder="Full Address (House No, Street)" class="w-full border p-2 rounded text-sm outline-none focus:border-[#5080BE]">
+                        <div class="flex gap-2">
+                            <input name="city" required placeholder="City" class="w-full border p-2 rounded text-sm outline-none focus:border-[#5080BE]">
+                            <input name="pincode" required placeholder="Pincode" class="w-full border p-2 rounded text-sm outline-none focus:border-[#5080BE]">
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm space-y-3">
+                        <h3 class="font-bold border-b pb-2 mb-2 flex items-center gap-2"><i data-lucide="credit-card" class="w-4 h-4"></i> Payment Method</h3>
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer bg-gray-50 hover:bg-blue-50 transition">
+                            <input type="radio" name="payment" value="COD" checked class="accent-[#5080BE]">
+                            <span class="font-medium text-sm">Cash on Delivery (COD)</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer bg-gray-50 hover:bg-blue-50 transition">
+                            <input type="radio" name="payment" value="UPI" class="accent-[#5080BE]">
+                            <span class="font-medium text-sm">UPI / Online Payment</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="w-full bg-[#5080BE] text-white py-4 rounded-xl font-bold text-lg shadow-lg mt-4">
+                        Place Order • ${formatPrice(total)}
+                    </button>
+                </form>
+            </div>`;
+            $('mainContent').innerHTML = html;
+            lucide.createIcons();
+        };
+
+        const renderAdmin = () => {
+            const html = `
+            <div class="animate-fadeIn pb-20">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold text-[#5080BE]">Admin Dashboard</h1>
+                    <button onclick="router('home')" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm font-bold">Exit</button>
+                </div>
+                         <!-- Stats -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                        <div class="text-xs text-gray-500">Orders</div>
+                        <div class="text-2xl font-bold">${state.adminOrders.length}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
+                        <div class="text-xs text-gray-500">Revenue</div>
+                        <div class="text-2xl font-bold">${formatPrice(state.adminOrders.reduce((a,c)=>a+c.total,0))}</div>
+                    </div>
+                </div>
+
+                <!-- Add Product -->
+                <div class="bg-white p-5 rounded-xl shadow-sm mb-6 border border-gray-200">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">Add New Product</h3>
+                    <form onsubmit="handleAdminAddProduct(event)" class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input name="name" required placeholder="Name" class="border p-2 rounded text-sm">
+                            <input name="brand" required placeholder="Brand" class="border p-2 rounded text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input name="price" required type="number" placeholder="Price" class="border p-2 rounded text-sm">
+                            <input name="mrp" type="number" placeholder="MRP" class="border p-2 rounded text-sm">
+                        </div>
+                        <input name="stock" required type="number" placeholder="Stock Quantity" class="w-full border p-2 rounded text-sm">
+                        <textarea name="desc" required placeholder="Description" class="w-full border p-2 rounded text-sm h-20"></textarea>
+                        <input name="img" required type="file" accept="image/*" class="w-full text-xs">
+                        <button class="w-full bg-[#5080BE] text-white py-2 rounded font-bold hover:bg-blue-700 transition">Upload Product</button>
+                    </form>
+                </div>
+
+                <!-- Add Banner -->
+                <div class="bg-white p-5 rounded-xl shadow-sm mb-6 border border-gray-200">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">Upload Banner</h3>
+                    <form onsubmit="handleAdminAddBanner(event)" class="flex gap-2">
+                        <input name="img" required type="file" accept="image/*" class="flex-1 text-xs border p-2 rounded">
+                        <button class="bg-gray-800 text-white px-4 rounded font-bold text-sm">Add</button>
+                    </form>
+                </div>
+
+                <!-- Manage Orders -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <h3 class="font-bold text-lg p-4 border-b bg-gray-50">Recent Orders</h3>
+                    ${state.adminOrders.map(o => `
+                        <div class="p-4 border-b last:border-0">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <div class="font-bold text-[#5080BE] text-sm">${o.shipping.name}</div>
+                                    <div class="text-xs text-gray-500">${o.shipping.mobile} | ${o.paymentMethod}</div>
+                                </div>
+                                <select onchange="updateOrderStatus('${o.id}', this.value)" class="text-xs border rounded p-1 font-bold ${getStatusColor(o.status)}">
+                                    <option ${o.status==='Pending'?'selected':''}>Pending</option>
+                                    <option ${o.status==='Approved'?'selected':''}>Approved</option>
+                                    <option ${o.status==='Shipped'?'selected':''}>Shipped</option>
+                                    <option ${o.status==='Delivered'?'selected':''}>Delivered</option>
+                                    <option ${o.status==='Rejected'?'selected':''}>Rejected</option>
+                                </select>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-2 border-l-2 pl-2 border-gray-200">
+                                ${o.items.map(i => `<div>${i.qty}x ${i.name}</div>`).join('')}
+                            </div>
+                            <div class="font-bold text-sm text-right">Total: ${formatPrice(o.total)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+            $('mainContent').innerHTML = html;
+        };
+
+        const renderOrders = () => {
+            if(!state.user) return router('home');
+            const html = `
+            <div class="animate-fadeIn pb-20">
+                <h2 class="text-2xl font-bold mb-6">Order History</h2>
+                <div class="space-y-4">
+                    ${state.orders.length > 0 ? state.orders.map(o => `
+                        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <span class="text-xs text-gray-400 block">Order ID: #${o.id.slice(0,6)}</span>
+                                    <span class="text-[10px] text-gray-400">${new Date(o.createdAt?.seconds*1000).toLocaleDateString()}</span>
+                                </div>
+                                <span class="px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(o.status)}">${o.status}</span>
+                            </div>
+                            <div class="space-y-1 mb-3">
+                                ${o.items.map(i => `
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600">${i.qty}x ${i.name}</span>
+                                        <span class="font-medium">${formatPrice(i.price * i.qty)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="border-t pt-3 flex justify-between items-center">
+                                <span class="font-bold text-lg text-[#5080BE]">${formatPrice(o.total)}</span>
+                                ${o.status === 'Delivered' ? '<span class="text-xs text-green-600 font-bold flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Delivered</span>' : ''}
+                            </div>
+                        </div>
+                    `).join('') : '<div class="text-center py-10 text-gray-500">No orders found.</div>'}
+                </div>
+            </div>`;
+            $('mainContent').innerHTML = html;
+            lucide.createIcons();
+        };
+
+        // --- 6. ACTIONS (THE LOGIC) ---
+
+        // Expose functions to Window so HTML can call them
+        window.openProduct = (id) => {
+            const p = state.products.find(x => x.id === id);
+            if(p) router('product', p);
+        };
+
+        window.addToCart = (id) => {
+            const p = state.products.find(x => x.id === id);
+            if (!p) return;
+            const existing = state.cart.find(item => item.id === id);
+            if (existing) {
+                existing.qty++;
+            } else {
+                state.cart.push({...p, qty: 1});
+            }
+            localStorage.setItem('wb_cart', JSON.stringify(state.cart));
+            updateCartCount();
+            showToast("Added to Cart!", "success");
+        };
+
+        window.updateQty = (id, change) => {
+            state.cart = state.cart.map(item => {
+                if (item.id === id) return {...item, qty: Math.max(1, item.qty + change)};
+                return item;
+            });
+            localStorage.setItem('wb_cart', JSON.stringify(state.cart));
+            renderCart();
+            updateCartCount();
+        };
+
+        window.removeFromCart = (id) => {
+            state.cart = state.cart.filter(x => x.id !== id);
+            localStorage.setItem('wb_cart', JSON.stringify(state.cart));
+            renderCart();
+            updateCartCount();
+        };
+
+        window.buyNow = (id) => {
+            window.addToCart(id);
+            router('cart');
+        };
+
+        window.handlePlaceOrder = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<span class="loader w-5 h-5 border-white border-t-transparent inline-block"></span> Processing...`;
+            
+            const fd = new FormData(e.target);
+            const shipping = {
+                name: fd.get('name'),
+                mobile: fd.get('mobile'),
+                address: fd.get('address'),
+                city: fd.get('city'),
+                pincode: fd.get('pincode')
+            };
+
+            try {
+                await addDoc(collection(db, "orders"), {
+                    userId: state.user.uid,
+                    items: state.cart,
+                    total: state.cart.reduce((t, i) => t + (i.price * i.qty), 0),
+                    shipping,
+                    paymentMethod: fd.get('payment'),
+                    status: "Pending",
+                    createdAt: serverTimestamp()
+                });
+                state.cart = [];
+                localStorage.setItem('wb_cart', JSON.stringify([]));
+                updateCartCount();
+                showToast("Order Placed Successfully!");
+                router('orders');
+            } catch (err) {
+                alert("Error placing order: " + err.message);
+            }
+        };
+
+        // Review Logic
+        window.handleAddReview = async (e, pid) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = "Posting...";
+            const fd = new FormData(e.target);
+            
+            let imgUrl = null;
+            if (fd.get('image').size > 0) {
+                imgUrl = await uploadImage(fd.get('image'));
+            }
+
+            const review = {
+                text: fd.get('text'),
+                rating: parseInt(fd.get('rating')),
+                userName: state.user.displayName || state.user.email.split('@')[0],
+                imageUrl: imgUrl,
+                date: new Date().toISOString()
+            };
+
+            await updateDoc(doc(db, "products", pid), {
+                reviews: arrayUnion(review)
+            });
+            
+            showToast("Review Added!");
+            // Refresh product view manually
+            const p = state.products.find(x => x.id === pid);
+            p.reviews = p.reviews ? [...p.reviews, review] : [review];
+            renderProduct(p);
+        };
+
+        // Admin Actions
+        window.handleAdminAddProduct = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = "Uploading...";
+            const fd = new FormData(e.target);
+            
+            try {
+                const url = await uploadImage(fd.get('img'));
+                if(!url) throw new Error("Image upload failed");
+
+                await addDoc(collection(db, "products"), {
+                    name: fd.get('name'),
+                    brand: fd.get('brand'),
+                    price: Number(fd.get('price')),
+                    mrp: Number(fd.get('mrp')),
+                    stock: Number(fd.get('stock')),
+                    description: fd.get('desc'),
+                    imageUrl: url,
+                    createdAt: serverTimestamp(),
+                    reviews: []
+                });
+                showToast("Product Added Successfully");
+                e.target.reset();
+            } catch (err) {
+                alert(err.message);
+            }
+            btn.innerText = "Upload Product";
+        };
+
+        window.handleAdminAddBanner = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = "...";
+            const url = await uploadImage(e.target.querySelector('input').files[0]);
+            if(url) {
+                await addDoc(collection(db, "banners"), { imageUrl: url, createdAt: serverTimestamp() });
+                showToast("Banner Added");
+                e.target.reset();
+            }
+            btn.innerText = "Add";
+        };
+
+        window.updateOrderStatus = async (oid, status) => {
+            await updateDoc(doc(db, "orders", oid), { status });
+            showToast(`Order marked as ${status}`);
+        };
+
+        // Auth Modal Logic
+        window.openAuthModal = () => $('authModal').classList.remove('hidden');
+        window.closeModal = (id) => $(id).classList.add('hidden');
+        window.toggleAuthMode = () => {
+            state.authMode = state.authMode === 'login' ? 'register' : 'login';
+            $('registerFields').classList.toggle('hidden');
+            $('authSubmitBtn').innerText = state.authMode === 'login' ? 'Login' : 'Create Account';
+            $('authToggleText').innerText = state.authMode === 'login' ? 'New user? ' : 'Have account? ';
+            $('authToggleBtn').innerText = state.authMode === 'login' ? 'Create Account' : 'Login';
+        };
+
+        window.handleAuthSubmit = async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const email = fd.get('email');
+            const pass = fd.get('password');
+            const btn = $('authSubmitBtn');
+            btn.innerText = "Please wait...";
+
+            try {
+                if (state.authMode === 'login') {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                    showToast("Logged in successfully");
+                } else {
+                    const res = await createUserWithEmailAndPassword(auth, email, pass);
+                    await setDoc(doc(db, "users", res.user.uid), {
+                        name: fd.get('name'),
+                        mobile: fd.get('mobile'),
+                        email: email,
+                        createdAt: serverTimestamp()
+                    });
+                    showToast("Account created!");
+                }
+                closeModal('authModal');
+            } catch (err) {
+                alert(err.message);
+            }
+            btn.innerText = state.authMode === 'login' ? 'Login' : 'Create Account';
+        };
+
+        window.handleProfileClick = () => {
+            if(state.user) router('profile');
+            else openAuthModal();
+        };
+        
+        // Search Filter
+        window.handleSearch = () => {
+            const q = $('searchInput').value.toLowerCase();
+            if(state.currentView !== 'home') router('home');
+            // Slight delay hack to allow renderHome to finish if route changed
+            setTimeout(() => {
+                const filtered = state.products.filter(p => p.name.toLowerCase().includes(q));
+                // We re-render only the grid part ideally, but for simplicity let's hack the DOM or re-render home with filter state.
+                // Better approach: Re-render home with local filtered variable.
+                // For this single file, let's just hide/show divs in the grid
+                const grid = document.querySelector('.grid');
+                if(grid) {
+                   grid.innerHTML = filtered.map(p => `
+                    <div onclick="openProduct('${p.id}')" class="bg-white rounded-xl shadow-sm p-3 flex flex-col gap-2 cursor-pointer hover:shadow-lg transition border border-gray-100">
+                        <div class="aspect-square bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center relative">
+                            <img src="${p.imageUrl}" class="w-full h-full object-contain p-2">
+                            ${p.stock < 1 ? '<span class="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded">Out of Stock</span>' : ''}
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-[#5080BE] bg-blue-50 w-fit px-1.5 py-0.5 rounded mb-1">${p.brand}</div>
+                            <h3 class="font-medium text-sm text-gray-800 line-clamp-1">${p.name}</h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="font-bold text-base text-[#5080BE]">${formatPrice(p.price)}</span>
+                            </div>
+                        </div>
+                    </div>`).join('');
+                }
+            }, 100);
+        };
+
+        // Profile View Render
+        const renderProfile = () => {
+            if(!state.user) return router('home');
+            $('mainContent').innerHTML = `
+            <div class="animate-fadeIn p-4">
+                <div class="bg-gradient-to-r from-[#5080BE] to-[#7EBBDA] rounded-2xl p-6 text-white text-center shadow-lg mb-6">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-3 backdrop-blur-sm border-2 border-white/50">
+                        ${state.user.email[0].toUpperCase()}
+                    </div>
+                    <h2 class="text-xl font-bold">${state.user.displayName || 'User'}</h2>
+                    <p class="text-blue-100 text-sm">${state.user.email}</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <button onclick="router('orders')" class="w-full flex items-center gap-4 p-4 border-b hover:bg-gray-50 transition">
+                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#5080BE]"><i data-lucide="package" class="w-5 h-5"></i></div>
+                        <div class="flex-1 text-left font-medium">My Orders</div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                    </button>
+                    <button onclick="router('cart')" class="w-full flex items-center gap-4 p-4 border-b hover:bg-gray-50 transition">
+                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#5080BE]"><i data-lucide="shopping-cart" class="w-5 h-5"></i></div>
+                        <div class="flex-1 text-left font-medium">My Cart</div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                    </button>
+                    <button onclick="handleLogout()" class="w-full flex items-center gap-4 p-4 hover:bg-red-50 transition text-red-500">
+                        <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center"><i data-lucide="log-out" class="w-5 h-5"></i></div>
+                        <div class="flex-1 text-left font-medium">Logout</div>
+                    </button>
+                </div>
+            </div>`;
+            lucide.createIcons();
+        };
+
+        window.handleLogout = () => {
+            signOut(auth);
+            state.user = null;
+            state.cart = [];
+            router('home');
+            showToast("Logged Out");
+        };
+
+    // Utils
+        const updateCartCount = () => {
+            const count = state.cart.length;
+            $('cartCount').innerText = count;
+            $('cartCount').classList.toggle('hidden', count === 0);
+            $('mobileCartCount').classList.toggle('hidden', count === 0);
+        };
+        const getStatusColor = (s) => {
+            if(s==='Pending') return 'bg-yellow-100 text-yellow-700';
+            if(s==='Delivered') return 'bg-green-100 text-green-700';
+            if(s==='Rejected') return 'bg-red-100 text-red-700';
+            return 'bg-blue-100 text-blue-700';
+        };
+
+        // --- START APP ---
+        init();
+        updateCartCount();
+
+    </script>
+</body>
+</html>
+
