@@ -37,6 +37,14 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
+        window.onerror = function(message, source, lineno, colno, error) {
+    alert("System Error: " + message);
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+    alert("Async Error: " + event.reason);
+});
+        
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
