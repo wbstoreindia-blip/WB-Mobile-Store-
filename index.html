@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WB Mobile Store</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Toastify for Alerts -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <style>
+        /* Custom Styling & Glassmorphism */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .glass-dark {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: white;
+        }
+
+        .product-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Hide scrollbar for category list */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Banner Animation */
+        .fade-enter {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+        .fade-enter-active {
+            opacity: 1;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Auth Overlay (Login/Register) -->
+    <div id="auth-container" class="fixed inset-0 z-50 bg-gray-100 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-blue-600">WB Store</h1>
+                <p class="text-gray-500 text-sm mt-1">Premium Mobile Electronics</p>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form">
+                <h2 class="text-xl font-semibold mb-4">Welcome Back</h2>
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Email Address" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition">Login</button>
+                </form>
+                <p class="mt-4 text-center text-sm">New here? <button onclick="toggleAuthMode('register')" class="text-blue-600 font-semibold">Create Account</button></p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="hidden">
+                <h2 class="text-xl font-semibold mb-4">Create Account</h2>
+                <form onsubmit="handleRegister(event)" class="space-y-4">
+                    <input type="text" id="reg-name" placeholder="Full Name" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="tel" id="reg-mobile" placeholder="Mobile Number" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="email" id="reg-email" placeholder="Email Address" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="password" id="reg-password" placeholder="Password (Min 6 chars)" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" minlength="6" required>
+                    <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg font-semibold hover:bg-green-700 transition">Register</button>
+                </form>
+                <p class="mt-4 text-center text-sm">Already have an account? <button onclick="toggleAuthMode('login')" class="text-blue-600 font-semibold">Login</button></p>
+            </div>
+            
+            <div id="auth-loader" class="hidden flex justify-center mt-4"><div class="loader"></div></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="flex-grow flex flex-col hidden">
+        
+        <!-- Navbar -->
+        <nav class="sticky top-0 z-40 glass shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <!-- Logo -->
+                    <div class="flex items-center cursor-pointer" onclick="navigateTo('home')">
+                        <i class="fa-solid fa-mobile-screen-button text-blue-600 text-2xl mr-2"></i>
+                        <span class="font-bold text-xl tracking-tight text-gray-800">WB<span class="text-blue-600">Store</span></span>
+                    </div>
+
+                    <!-- Search Bar (Client Only) -->
+                    <div id="nav-search-container" class="hidden md:flex flex-1 mx-8 max-w-md relative">
+                        <input type="text" id="nav-search" placeholder="Search mobile, brand..." class="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-blue-300 transition" oninput="handleSearch(this.value)">
+                        <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center space-x-4">
+                        <button id="nav-cart-btn" class="relative p-2 text-gray-600 hover:text-blue-600 transition hidden" onclick="toggleCart()">
+                            <i class="fa-solid fa-shopping-cart text-xl"></i>
+                            <span id="cart-count" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">0</span>
+                        </button>
+                        
+                        <div class="relative group">
+                            <button class="flex items-center space-x-2 focus:outline-none">
+                                <img src="https://ui-avatars.com/api/?name=User&background=random" id="user-avatar" class="h-8 w-8 rounded-full">
+                            </button>
+                            <!-- Dropdown -->
+                            <div class="absolute right-0 w-48 mt-2 origin-top-right bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 hidden group-hover:block">
+                                <a href="#" onclick="showMyOrders()" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 client-only">My Orders</a>
+                                <a href="#" onclick="handleLogout()" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mobile Search -->
+                <div class="md:hidden pb-3 px-1 client-only">
+                    <input type="text" placeholder="Search..." class="w-full bg-gray-100 rounded-lg py-2 px-4" oninput="handleSearch(this.value)">
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dynamic Content Area -->
+        <main id="main-content" class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+            <!-- Content Injected via JS -->
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-900 text-white mt-auto">
+            <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <span class="font-bold text-lg">WB Mobile Store</span>
+                    <p class="text-gray-400 text-sm">Best deals in West Bengal</p>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Product Details Modal -->
+    <div id="product-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative p-6">
+            <button onclick="closeModal('product-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-black"><i class="fa-solid fa-times text-xl"></i></button>
+            <div id="product-modal-content" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div id="cart-sidebar" class="fixed inset-y-0 right-0 z-50 w-full md:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out">
+        <div class="h-full flex flex-col">
+            <div class="px-4 py-6 bg-gray-50 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold">Shopping Cart</h2>
+                <button onclick="toggleCart()" class="text-gray-500 hover:text-black"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Cart Items Injected Here -->
+            </div>
+            <div class="p-4 border-t bg-gray-50">
+                <div class="flex justify-between mb-4 text-lg font-bold">
+                    <span>Total</span>
+                    <span id="cart-total">₹0</span>
+                </div>
+                <button onclick="openCheckout()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">Proceed to Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 relative">
+            <button onclick="closeModal('checkout-modal')" class="absolute top-4 right-4 text-gray-500"><i class="fa-solid fa-times"></i></button>
+            <h2 class="text-2xl font-bold mb-6">Checkout</h2>
+            
+            <form id="checkout-form" onsubmit="handlePlaceOrder(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
+                    <textarea id="address" rows="2" class="w-full border rounded-lg p-2" required placeholder="Street, City, Pin Code"></textarea>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="payment" value="COD" class="mr-3" onchange="togglePaymentDetails()" checked>
+                            <i class="fa-solid fa-money-bill-wave text-green-600 mr-2"></i> Cash on Delivery
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="payment" value="UPI" class="mr-3" onchange="togglePaymentDetails()">
+                            <i class="fa-solid fa-qrcode text-blue-600 mr-2"></i> Pay via UPI
+                        </label>
+                    </div>
+                </div>
+
+                <div id="upi-details" class="hidden mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <div class="text-center mb-4">
+                        <div class="bg-white p-2 inline-block rounded shadow-sm">
+                            <!-- Placeholder QR -->
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=7810863463@pthdfc&pn=WBStore&cu=INR" alt="QR Code" class="w-32 h-32">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Scan or click Pay Now</p>
+                    </div>
+                    <a href="upi://pay?pa=7810863463@pthdfc&pn=WBStore&cu=INR" class="block w-full text-center bg-blue-600 text-white py-2 rounded mb-3 text-sm">Pay Now App</a>
+                    
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Enter UTR / Transaction ID (12 Digits)</label>
+                    <input type="text" id="utr-input" placeholder="e.g., 345678912345" class="w-full border p-2 rounded text-sm" maxlength="12">
+                    <p id="utr-error" class="text-red-500 text-xs mt-1 hidden">Invalid UTR. Must be 12 digits.</p>
+                </div>
+
+                <button type="submit" class="w-full bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800" id="place-order-btn">
+                    Place Order
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Upload Modal -->
+    <div id="admin-product-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
+            <button onclick="closeModal('admin-product-modal')" class="absolute top-4 right-4"><i class="fa-solid fa-times"></i></button>
+            <h2 class="text-2xl font-bold mb-6">Add New Product</h2>
+            <form onsubmit="handleProductUpload(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="prod-title" placeholder="Product Title" class="border p-2 rounded" required>
+                    <input type="number" id="prod-price" placeholder="Price (₹)" class="border p-2 rounded" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <select id="prod-category" class="border p-2 rounded" onchange="toggleDynamicFields()" required>
+                        <option value="">Select Category</option>
+                        <option value="Mobile">Mobile Phones</option>
+                        <option value="Clothing">Clothing</option>
+                        <option value="Accessories">Accessories</option>
+                    </select>
+                    <input type="text" id="prod-brand" placeholder="Brand" class="border p-2 rounded" required>
+                </div>
+                
+                <!-- Dynamic Fields -->
+                <div id="dynamic-clothing" class="hidden">
+                    <label class="block text-sm font-medium">Sizes (comma separated)</label>
+                    <input type="text" id="prod-sizes" placeholder="S, M, L, XL" class="w-full border p-2 rounded">
+                </div>
+                <div id="dynamic-mobile" class="hidden">
+                    <label class="block text-sm font-medium">Specs</label>
+                    <input type="text" id="prod-specs" placeholder="RAM, Storage, Processor..." class="w-full border p-2 rounded">
+                </div>
+
+                <textarea id="prod-desc" rows="3" placeholder="Description" class="w-full border p-2 rounded" required></textarea>
+                <input type="number" id="prod-stock" placeholder="Stock Quantity" class="w-full border p-2 rounded" required>
+                <input type="text" id="prod-tags" placeholder="Search Keywords (comma separated)" class="w-full border p-2 rounded">
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Product Image (Required)</label>
+                    <input type="file" id="prod-image" accept="image/*" class="w-full border p-2 rounded" required>
+                </div>
+                
+                <button type="submit" id="upload-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Upload Product</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Banner Modal -->
+    <div id="admin-banner-modal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 relative w-96">
+            <button onclick="closeModal('admin-banner-modal')" class="absolute top-2 right-2"><i class="fa-solid fa-times"></i></button>
+            <h3 class="text-lg font-bold mb-4">Upload Promotion Banner</h3>
+            <form onsubmit="handleBannerUpload(event)">
+                <input type="file" id="banner-image" accept="image/*" class="w-full border p-2 rounded mb-4" required>
+                <button type="submit" id="banner-upload-btn" class="w-full bg-green-600 text-white py-2 rounded">Upload Banner</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBx724MefpWjw6KfUMX9o7BkygQ5xeD02k",
+            authDomain: "wb-mobile-store.firebaseapp.com",
+            projectId: "wb-mobile-store",
+            storageBucket: "wb-mobile-store.firebasestorage.app",
+            messagingSenderId: "54481231902",
+            appId: "1:54481231902:web:395ad38266e975fae6ce0f",
+            measurementId: "G-5R648HZ40T"
+        };
+
+        const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dyt6fwvw0/image/upload";
+        const CLOUDINARY_PRESET = "Wb_mobile_products";
+        const ADMIN_EMAIL = "wbstore.india@gmail.com";
+
+        // --- INITIALIZATION ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- STATE ---
+        let currentUser = null;
+        let isAdmin = false;
+        let products = [];
+        let cart = JSON.parse(localStorage.getItem('wb_cart')) || [];
+        let banners = [];
+
+        // --- EXPOSE FUNCTIONS TO WINDOW ---
+        // Need to attach module functions to window for HTML event handlers
+        window.toggleAuthMode = (mode) => {
+            if(mode === 'register') {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.remove('hidden');
+            } else {
+                document.getElementById('register-form').classList.add('hidden');
+                document.getElementById('login-form').classList.remove('hidden');
+            }
+        };
+
+        window.navigateTo = (view) => {
+            const main = document.getElementById('main-content');
+            
+            if (isAdmin) {
+                if (view === 'dashboard') renderAdminDashboard();
+                if (view === 'orders') renderAdminOrders();
+                if (view === 'products') renderAdminProducts();
+            } else {
+                if (view === 'home') renderClientHome();
+            }
+        };
+
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+        window.openCheckout = () => {
+            if(cart.length === 0) return showToast("Cart is empty", "error");
+            toggleCart(); // Close sidebar
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        };
+        window.togglePaymentDetails = () => {
+            const method = document.querySelector('input[name="payment"]:checked').value;
+            const upiDetails = document.getElementById('upi-details');
+            if (method === 'UPI') upiDetails.classList.remove('hidden');
+            else upiDetails.classList.add('hidden');
+        };
+        window.toggleCart = () => {
+            const sb = document.getElementById('cart-sidebar');
+            if (sb.classList.contains('translate-x-full')) sb.classList.remove('translate-x-full');
+            else sb.classList.add('translate-x-full');
+            renderCart();
+        };
+        window.toggleDynamicFields = () => {
+            const cat = document.getElementById('prod-category').value;
+            document.getElementById('dynamic-clothing').classList.add('hidden');
+            document.getElementById('dynamic-mobile').classList.add('hidden');
+            if(cat === 'Clothing') document.getElementById('dynamic-clothing').classList.remove('hidden');
+            if(cat === 'Mobile') document.getElementById('dynamic-mobile').classList.remove('hidden');
+        }
+
+        // --- AUTHENTICATION LOGIC ---
+        onAuthStateChanged(auth, (user) => {
+            const authContainer = document.getElementById('auth-container');
+            const appContainer = document.getElementById('app-container');
+
+            if (user) {
+                currentUser = user;
+                isAdmin = (user.email === ADMIN_EMAIL);
+                
+                // Update UI User info
+                document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${user.displayName || 'User'}&background=random`;
+                
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+
+                if (isAdmin) {
+                    setupAdminView();
+                } else {
+                    setupClientView();
+                }
+            } else {
+                currentUser = null;
+                isAdmin = false;
+                appContainer.classList.add('hidden');
+                authContainer.classList.remove('hidden');
+            }
+        });
+
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                showToast("Welcome back!", "success");
+            } catch (error) {
+                showToast(error.message, "error");
+            }
+        };
+
+        window.handleRegister = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const mobile = document.getElementById('reg-mobile').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+            
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                await updateProfile(userCredential.user, { displayName: name });
+                // Store extra details in Firestore
+                await addDoc(collection(db, "users"), {
+                    uid: userCredential.user.uid,
+                    name, mobile, email,
+                    role: 'user',
+                    joined: serverTimestamp()
+                });
+                showToast("Account created successfully!", "success");
+            } catch (error) {
+                showToast(error.message, "error");
+            }
+        };
+
+        window.handleLogout = () => signOut(auth);
+
+        // --- CLOUDINARY UPLOAD ---
+        async function uploadToCloudinary(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_PRESET);
+            
+            const res = await fetch(CLOUDINARY_URL, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            return data.secure_url;
+        }
+
+        // --- CLIENT SIDE LOGIC ---
+        
+        function setupClientView() {
+            // Hide Admin elements, Show Client elements
+            document.getElementById('nav-search-container').classList.remove('hidden');
+            document.getElementById('nav-cart-btn').classList.remove('hidden');
+            document.querySelectorAll('.client-only').forEach(el => el.classList.remove('hidden'));
+            
+            // Listen to data
+            listenToProducts();
+            listenToBanners();
+            
+            // Initial render
+            renderClientHome();
+        }
+
+        function listenToProducts() {
+            const q = query(collection(db, "products"));
+            onSnapshot(q, (snapshot) => {
+                products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const main = document.getElementById('main-content');
+                // Only re-render if we are on the home page or search result page to avoid jarring UX
+                if (!document.getElementById('admin-dashboard')) {
+                    renderProductGrid(products);
+                }
+            });
+        }
+
+        function listenToBanners() {
+            const q = query(collection(db, "banners"), where("active", "==", true));
+            onSnapshot(q, (snapshot) => {
+                banners = snapshot.docs.map(doc => doc.data().url);
+                if(document.getElementById('hero-slider')) initHeroSlider();
+            });
+        }
+
+        function renderClientHome() {
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <!-- Hero Slider -->
+                <div id="hero-slider" class="relative w-full h-48 md:h-80 rounded-2xl overflow-hidden mb-8 shadow-lg bg-gray-200">
+                    <div id="slider-track" class="w-full h-full flex transition-transform duration-500">
+                        <!-- Banners go here -->
+                        <div class="w-full h-full flex items-center justify-center text-gray-400">Loading Banners...</div>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="mb-8">
+                    <h2 class="text-xl font-bold mb-4">Categories</h2>
+                    <div class="flex space-x-4 overflow-x-auto no-scrollbar pb-2">
+                        ${['All', 'Mobile', 'Accessories', 'Clothing'].map(cat => `
+                            <button onclick="filterCategory('${cat}')" class="px-6 py-2 bg-white border rounded-full hover:bg-black hover:text-white transition whitespace-nowrap shadow-sm">
+                                ${cat}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Product Grid -->
+                <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Products injected here -->
+                </div>
+            `;
+            initHeroSlider();
+            renderProductGrid(products);
+        }
+
+        function initHeroSlider() {
+            const track = document.getElementById('slider-track');
+            if(!track || banners.length === 0) return;
+            
+            track.innerHTML = banners.map(url => `
+                <div class="w-full h-full flex-shrink-0 bg-cover bg-center" style="background-image: url('${url}')"></div>
+            `).join('');
+
+            let idx = 0;
+            if(window.sliderInterval) clearInterval(window.sliderInterval);
+            window.sliderInterval = setInterval(() => {
+                idx = (idx + 1) % banners.length;
+                track.style.transform = `translateX(-${idx * 100}%)`;
+            }, 3000);
+        }
+
+        function renderProductGrid(items) {
+            const grid = document.getElementById('product-grid');
+            if(!grid) return;
+            
+            if(items.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">No products found.</div>`;
+                return;
+            }
+
+            grid.innerHTML = items.map(p => `
+                <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 cursor-pointer product-card group" onclick="openProductDetail('${p.id}')">
+                    <div class="relative h-48 overflow-hidden">
+                        <img src="${p.image}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="${p.title}">
+                        <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow hover:text-blue-600">
+                            <i class="fa-solid fa-cart-plus"></i>
+                        </button>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-xs text-gray-500 mb-1">${p.category}</p>
+                        <h3 class="font-bold text-gray-800 truncate">${p.title}</h3>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-blue-600 font-bold">₹${p.price}</span>
+                            ${p.stock < 5 ? `<span class="text-xs text-red-500 font-medium">Only ${p.stock} left!</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.filterCategory = (cat) => {
+            if(cat === 'All') renderProductGrid(products);
+            else renderProductGrid(products.filter(p => p.category === cat));
+        };
+
+        window.handleSearch = (term) => {
+            term = term.toLowerCase();
+            const filtered = products.filter(p => 
+                p.title.toLowerCase().includes(term) || 
+                p.brand.toLowerCase().includes(term) ||
+                (p.keywords && p.keywords.toLowerCase().includes(term))
+            );
+            renderProductGrid(filtered);
+        };
+
+        window.openProductDetail = (id) => {
+            const p = products.find(x => x.id === id);
+            if(!p) return;
+            
+            const modal = document.getElementById('product-modal');
+            const content = document.getElementById('product-modal-content');
+            
+            content.innerHTML = `
+                <div class="h-64 md:h-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    <img src="${p.image}" class="max-h-full max-w-full object-contain">
+                </div>
+                <div class="flex flex-col justify-center">
+                    <span class="text-blue-600 text-sm font-semibold">${p.brand}</span>
+                    <h2 class="text-3xl font-bold mb-2">${p.title}</h2>
+                    <div class="text-2xl font-bold text-gray-800 mb-4">₹${p.price}</div>
+                    
+                    <p class="text-gray-600 mb-6 leading-relaxed">${p.description}</p>
+                    
+                    ${p.specs ? `<div class="mb-4 bg-gray-50 p-3 rounded text-sm"><span class="font-bold">Specs:</span> ${p.specs}</div>` : ''}
+                    ${p.sizes ? `<div class="mb-6"><span class="font-bold mr-2">Size:</span> 
+                        ${p.sizes.split(',').map(s => `<span class="inline-block border px-3 py-1 rounded text-sm mr-2">${s}</span>`).join('')}
+                    </div>` : ''}
+
+                    <div class="flex space-x-4 mt-auto">
+                        <button onclick="addToCart('${p.id}'); closeModal('product-modal')" class="flex-1 bg-black text-white py-3 rounded-lg font-bold hover:bg-gray-800">
+                            Add to Cart
+                        </button>
+                        <button class="flex-1 border-2 border-black py-3 rounded-lg font-bold hover:bg-gray-100">
+                            Buy Now
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        };
+
+        // --- CART LOGIC ---
+        window.addToCart = (id) => {
+            const p = products.find(x => x.id === id);
+            const existing = cart.find(x => x.id === id);
+            if(existing) existing.qty++;
+            else cart.push({ ...p, qty: 1 });
+            
+            updateCartUI();
+            showToast(`${p.title} added to cart`, "success");
+        };
+
+        window.removeFromCart = (id) => {
+            cart = cart.filter(x => x.id !== id);
+            updateCartUI();
+        };
+
+        function updateCartUI() {
+            localStorage.setItem('wb_cart', JSON.stringify(cart));
+            document.getElementById('cart-count').innerText = cart.reduce((acc, item) => acc + item.qty, 0);
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            
+            if(cart.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-500 mt-10">Your cart is empty</div>`;
+                totalEl.innerText = "₹0";
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = cart.map(item => {
+                total += item.price * item.qty;
+                return `
+                <div class="flex items-center gap-4 bg-white p-2 rounded shadow-sm">
+                    <img src="${item.image}" class="w-16 h-16 object-cover rounded">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm line-clamp-1">${item.title}</h4>
+                        <p class="text-blue-600 text-sm">₹${item.price} x ${item.qty}</p>
+                    </div>
+                    <button onclick="removeFromCart('${item.id}'); renderCart()" class="text-red-500 hover:text-red-700">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>`;
+            }).join('');
+            
+            totalEl.innerText = `₹${total}`;
+        }
+
+        // --- ORDER LOGIC ---
+        window.handlePlaceOrder = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('place-order-btn');
+            const address = document.getElementById('address').value;
+            const method = document.querySelector('input[name="payment"]:checked').value;
+            const utr = document.getElementById('utr-input').value;
+            
+            // Validation
+            if (method === 'UPI') {
+                const utrRegex = /^[0-9]{12}$/;
+                if (!utrRegex.test(utr)) {
+                    document.getElementById('utr-error').classList.remove('hidden');
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            try {
+                const orderData = {
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName,
+                    userEmail: currentUser.email,
+                    items: cart,
+                    total: cart.reduce((acc, i) => acc + (i.price * i.qty), 0),
+                    address,
+                    method,
+                    utr: method === 'UPI' ? utr : null,
+                    status: 'Processing',
+                    createdAt: serverTimestamp()
+                };
+
+                await addDoc(collection(db, "orders"), orderData);
+                
+                // Clear Cart
+                cart = [];
+                updateCartUI();
+                closeModal('checkout-modal');
+                showToast("Order Placed Successfully!", "success");
+                
+                // Redirect to orders
+                showMyOrders();
+
+            } catch (error) {
+                console.error(error);
+                showToast("Order Failed. Try again.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Place Order";
+            }
+        };
+
+        window.showMyOrders = () => {
+            document.getElementById('nav-search-container').classList.add('hidden'); // Clean UI
+            const main = document.getElementById('main-content');
+            main.innerHTML = `<h2 class="text-2xl font-bold mb-6">My Orders</h2><div id="my-orders-list" class="space-y-4">Loading...</div>`;
+            
+            const q = query(collection(db, "orders"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('my-orders-list');
+                if(snapshot.empty) {
+                    list.innerHTML = "No orders found.";
+                    return;
+                }
+                list.innerHTML = snapshot.docs.map(doc => {
+                    const o = doc.data();
+                    const color = o.status === 'Delivered' ? 'text-green-600' : 'text-orange-500';
+                    return `
+                        <div class="bg-white p-4 rounded-xl shadow border-l-4 ${o.status === 'Delivered' ? 'border-green-500' : 'border-orange-500'}">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="text-xs text-gray-400">Order ID: ${doc.id}</p>
+                                    <p class="font-bold">Total: ₹${o.total}</p>
+                                </div>
+                                <span class="font-bold text-sm ${color}">${o.status}</span>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                ${o.items.map(i => `${i.title} (x${i.qty})`).join(', ')}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">Payment: ${o.method} ${o.utr ? `(UTR: ${o.utr})` : ''}</p>
+                        </div>
+                    `;
+                }).join('');
+            });
+        };
+
+        // --- ADMIN LOGIC ---
+
+        function setupAdminView() {
+            // Hide client specific nav elements
+            document.getElementById('nav-search-container').classList.add('hidden');
+            document.getElementById('nav-cart-btn').classList.add('hidden');
+            document.querySelectorAll('.client-only').forEach(el => el.classList.add('hidden'));
+
+            // Render Admin Nav in main area simply via buttons
+            renderAdminDashboard();
+        }
+
+        function renderAdminDashboard() {
+            const main = document.getElementById('main-content');
+            
+            // Fetch stats real quick (simplified)
+            const q = query(collection(db, "orders"));
+            getDocs(q).then(snap => {
+                const totalOrders = snap.size;
+                const totalRevenue = snap.docs.reduce((acc, d) => acc + d.data().total, 0);
+                
+                document.getElementById('stat-orders').innerText = totalOrders;
+                document.getElementById('stat-revenue').innerText = `₹${totalRevenue}`;
+            });
+
+            main.innerHTML = `
+                <div id="admin-dashboard" class="space-y-8">
+                    <div class="flex justify-between items-center">
+                        <h1 class="text-3xl font-bold">Admin Dashboard</h1>
+                        <div class="space-x-2">
+                            <button onclick="document.getElementById('admin-product-modal').classList.remove('hidden')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                <i class="fa-solid fa-plus mr-2"></i> Add Product
+                            </button>
+                            <button onclick="document.getElementById('admin-banner-modal').classList.remove('hidden')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                                <i class="fa-solid fa-image mr-2"></i> Add Banner
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <p class="text-gray-500 text-sm">Total Revenue</p>
+                            <h3 id="stat-revenue" class="text-2xl font-bold text-green-600">Loading...</h3>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <p class="text-gray-500 text-sm">Total Orders</p>
+                            <h3 id="stat-orders" class="text-2xl font-bold text-blue-600">Loading...</h3>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <p class="text-gray-500 text-sm">Active Products</p>
+                            <h3 class="text-2xl font-bold text-purple-600">${products.length || '...'}</h3>
+                        </div>
+                    </div>
+
+                    <!-- Order Management -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b">
+                            <h2 class="text-xl font-bold">Recent Orders</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="p-4 text-sm font-semibold text-gray-600">Order ID</th>
+                                        <th class="p-4 text-sm font-semibold text-gray-600">Customer</th>
+                                        <th class="p-4 text-sm font-semibold text-gray-600">Amount</th>
+                                        <th class="p-4 text-sm font-semibold text-gray-600">Payment</th>
+                                        <th class="p-4 text-sm font-semibold text-gray-600">Status</th>
+                                        <th class="p-4 text-sm font-semibold text-gray-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-orders-list">
+                                    <!-- Orders Injected Here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            listenToAdminOrders();
+        }
+
+        function listenToAdminOrders() {
+            const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                const tbody = document.getElementById('admin-orders-list');
+                if(!tbody) return;
+                
+                tbody.innerHTML = snapshot.docs.map(doc => {
+                    const o = doc.data();
+                    const isUPI = o.method === 'UPI';
+                    return `
+                        <tr class="border-t hover:bg-gray-50">
+                            <td class="p-4 text-xs font-mono text-gray-500">...${doc.id.slice(-6)}</td>
+                            <td class="p-4">
+                                <p class="font-bold text-sm">${o.userName}</p>
+                                <p class="text-xs text-gray-500">${o.userEmail}</p>
+                            </td>
+                            <td class="p-4 font-bold">₹${o.total}</td>
+                            <td class="p-4">
+                                <span class="px-2 py-1 text-xs rounded-full ${isUPI ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                                    ${o.method}
+                                </span>
+                                ${isUPI ? `<div class="text-xs mt-1 text-gray-500" title="UTR: ${o.utr}">UTR: ${o.utr}</div>` : ''}
+                            </td>
+                            <td class="p-4">
+                                <span class="px-2 py-1 text-xs rounded-full ${o.status === 'Delivered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                    ${o.status}
+                                </span>
+                            </td>
+                            <td class="p-4">
+                                <select onchange="updateOrderStatus('${doc.id}', this.value)" class="text-xs border rounded p-1">
+                                    <option value="Processing" ${o.status === 'Processing' ? 'selected' : ''}>Processing</option>
+                                    <option value="Shipped" ${o.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                    <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                                </select>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            });
+        }
+
+        window.updateOrderStatus = async (id, status) => {
+            try {
+                await updateDoc(doc(db, "orders", id), { status });
+                showToast(`Order status updated to ${status}`, "success");
+            } catch (err) {
+                showToast("Failed to update status", "error");
+            }
+        };
+
+        window.handleProductUpload = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('upload-btn');
+            btn.innerText = "Uploading...";
+            btn.disabled = true;
+
+            try {
+                const file = document.getElementById('prod-image').files[0];
+                if (!file) throw new Error("Image required");
+
+                const imageUrl = await uploadToCloudinary(file);
+
+                const productData = {
+                    title: document.getElementById('prod-title').value,
+                    price: Number(document.getElementById('prod-price').value),
+                    category: document.getElementById('prod-category').value,
+                    brand: document.getElementById('prod-brand').value,
+                    description: document.getElementById('prod-desc').value,
+                    stock: Number(document.getElementById('prod-stock').value),
+                    keywords: document.getElementById('prod-tags').value,
+                    image: imageUrl,
+                    sizes: document.getElementById('prod-sizes').value || null,
+                    specs: document.getElementById('prod-specs').value || null,
+                    createdAt: serverTimestamp()
+                };
+
+                await addDoc(collection(db, "products"), productData);
+                closeModal('admin-product-modal');
+                e.target.reset();
+                showToast("Product uploaded successfully", "success");
+            } catch (error) {
+                showToast("Upload failed: " + error.message, "error");
+            } finally {
+                btn.innerText = "Upload Product";
+                btn.disabled = false;
+            }
+        };
+
+        window.handleBannerUpload = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('banner-upload-btn');
+            btn.innerText = "Uploading...";
+            btn.disabled = true;
+            
+            try {
+                const file = document.getElementById('banner-image').files[0];
+                const url = await uploadToCloudinary(file);
+                await addDoc(collection(db, "banners"), { url, active: true, createdAt: serverTimestamp() });
+                closeModal('admin-banner-modal');
+                showToast("Banner added", "success");
+            } catch (error) {
+                showToast("Failed", "error");
+            } finally {
+                btn.innerText = "Upload Banner";
+                btn.disabled = false;
+            }
+        };
+
+        // --- UTILS ---
+        function showToast(msg, type) {
+            Toastify({
+                text: msg,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                backgroundColor: type === "error" ? "#ef4444" : "#10b981",
+                stopOnFocus: true,
+            }).showToast();
+        }
+
+    </script>
+</body>
+</html>
