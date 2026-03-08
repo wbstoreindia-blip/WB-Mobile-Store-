@@ -96,7 +96,7 @@ const ProductCard = ({ product }) => {
           {name}
         </h3>
 
-        <p
+      
           style={{
             fontSize: "0.8rem",
             color: "#ccc",
@@ -104,8 +104,7 @@ const ProductCard = ({ product }) => {
           }}
         >
           {brand}
-        </p>
-
+      
         {/* Price */}
         <div
           style={{
