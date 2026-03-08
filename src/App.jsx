@@ -13,32 +13,36 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
 
-// Context Providers (We will create these soon)
-// import { AuthProvider } from './context/AuthContext';
-// import { CartProvider } from './context/CartContext';
+// Context Providers (Ab hum inko yahan activate kar rahe hain)
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 
 function App() {
   return (
-    <Router>
-      <div className="app-container">
-        <Navbar />
-        
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/category/:id" element={<Category />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <div className="app-container">
+            <Navbar />
             
-            {/* Secure Admin Route */}
-            <Route path="/admin-panel-secret" element={<AdminDashboard />} />
-          </Routes>
-        </main>
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/category/:id" element={<Category />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                
+                {/* Secure Admin Route */}
+                <Route path="/admin-panel-secret" element={<AdminDashboard />} />
+              </Routes>
+            </main>
 
-        <Footer />
-      </div>
-    </Router>
+            <Footer />
+          </div>
+        </Router>
+      </CartProvider>
+    </AuthProvider>
   );
 }
 
