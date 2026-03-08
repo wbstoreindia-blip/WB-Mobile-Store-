@@ -78,38 +78,3 @@ const ProductCard = ({ product }) => {
 };
 
 export default ProductCard;
-          {product.brand}
-        </p>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
-            {formatPrice(product.price)}
-          </span>
-          {product.oldPrice && (
-            <span style={{ fontSize: '0.9rem', color: '#888', textDecoration: 'line-through' }}>
-              {formatPrice(product.oldPrice)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-        <Link 
-          to={`/product/${product.id}`} 
-          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px', border: '1px solid #A7EBF2', color: '#A7EBF2', textDecoration: 'none' }}
-        >
-          <Eye size={18} style={{ marginRight: '5px' }} />
-          View
-        </Link>
-        <button 
-          style={{ background: '#A7EBF2', color: '#011C40', border: 'none', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-        >
-          <ShoppingCart size={18} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default ProductCard;
