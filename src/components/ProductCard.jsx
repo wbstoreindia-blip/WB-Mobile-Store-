@@ -16,7 +16,7 @@ const ProductCard = ({ product }) => {
   } = product;
 
   const formatPrice = (value) => {
-    if (!value) return "Price Unavailable";
+    if (value === undefined || value === null) return "Price Unavailable";
 
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -33,13 +33,9 @@ const ProductCard = ({ product }) => {
   return (
     <div
       className="luna-card"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-      }}
+      style={{ display: "flex", flexDirection: "column", height: "100%" }}
     >
-      {/* Image Section */}
+      {/* Image */}
       <div
         style={{
           position: "relative",
@@ -72,7 +68,7 @@ const ProductCard = ({ product }) => {
               color: "#011C40",
               padding: "3px 8px",
               borderRadius: "6px",
-              fontSize: "0.75rem",
+              fontSize: "12px",
               fontWeight: "bold",
             }}
           >
@@ -81,7 +77,7 @@ const ProductCard = ({ product }) => {
         )}
       </div>
 
-      {/* Product Info */}
+      {/* Info */}
       <div style={{ marginTop: "15px", flex: 1 }}>
         <h3
           style={{
@@ -96,28 +92,17 @@ const ProductCard = ({ product }) => {
           {name}
         </h3>
 
-      
-          style={{
-            fontSize: "0.8rem",
-            color: "#ccc",
-            marginBottom: "10px",
-          }}
-        >
+        <p style={{ fontSize: "0.8rem", color: "#ccc", marginBottom: "10px" }}>
           {brand}
-      
+        </p>
+
         {/* Price */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span
             style={{
               fontSize: "1.2rem",
               fontWeight: "bold",
-              color: "#fff",
+              color: "white",
             }}
           >
             {formatPrice(price)}
@@ -137,14 +122,8 @@ const ProductCard = ({ product }) => {
         </div>
       </div>
 
-      {/* Actions */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginTop: "15px",
-        }}
-      >
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
         <Link
           to={`/product/${id}`}
           style={{
