@@ -1,0 +1,25 @@
+{
+  "short_name": "WB Store",
+  "name": "WB Mobile & Electronics Store",
+  "description": "Premium destination for the latest smartphones and gadgets.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#011C40",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#011C40",
+  "orientation": "portrait"
+}
