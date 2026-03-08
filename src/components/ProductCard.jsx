@@ -3,10 +3,8 @@ import { Link } from 'react-router-dom';
 import { ShoppingCart, Eye } from 'lucide-react';
 
 const ProductCard = ({ product }) => {
-  // Safety Check: Agar product nahi mila toh crash mat ho
   if (!product) return null;
 
-  // Format price to Indian Rupees (with Safety Check)
   const formatPrice = (price) => {
     if (!price) return 'Price Unavailable';
     return new Intl.NumberFormat('en-IN', {
@@ -16,14 +14,12 @@ const ProductCard = ({ product }) => {
     }).format(price);
   };
 
-  // Safety Shield: Agar image missing hai, toh yeh fake image dikha do
   const imageToShow = product.images && product.images.length > 0 
     ? product.images[0] 
     : 'https://via.placeholder.com/300x300/011C40/A7EBF2?text=WB+Store';
 
   return (
     <div className="luna-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Product Image Area */}
       <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', overflow: 'hidden', borderRadius: '12px', background: '#011C40' }}>
         <img 
           src={imageToShow} 
@@ -37,7 +33,6 @@ const ProductCard = ({ product }) => {
         )}
       </div>
 
-      {/* Product Info */}
       <div style={{ marginTop: '15px', flex: 1 }}>
         <h3 style={{ fontSize: '1rem', color: '#A7EBF2', marginBottom: '5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {product.name || 'Unknown Item'}
@@ -58,7 +53,6 @@ const ProductCard = ({ product }) => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
         <Link 
           to={`/product/${product.id}`} 
