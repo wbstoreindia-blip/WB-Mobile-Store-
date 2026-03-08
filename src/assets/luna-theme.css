@@ -1,0 +1,91 @@
+/* Luna Midnight Brand Palette 
+  Primary: #011C40 (Midnight Blue)
+  Secondary: #A7EBF2 (Icy Blue)
+*/
+
+:root {
+  --luna-midnight: #011C40;
+  --luna-dark: #023859;
+  --luna-medium: #26658C;
+  --luna-teal: #54ACBF;
+  --luna-light: #A7EBF2;
+  --white: #ffffff;
+  --gray-light: #f4f7f6;
+  --error: #ff4d4d;
+}
+
+/* Base Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--luna-midnight);
+  color: var(--white);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Layout Containers */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Premium Card Style (Used for Products) */
+.luna-card {
+  background: var(--luna-dark);
+  border: 1px solid var(--luna-medium);
+  border-radius: 16px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.luna-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--luna-teal);
+}
+
+/* Button Styles */
+.btn-primary {
+  background: var(--luna-light);
+  color: var(--luna-midnight);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--luna-teal);
+  color: var(--white);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--luna-light);
+  color: var(--luna-light);
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Utility Classes */
+.text-luna-light { color: var(--luna-light); }
+.bg-luna-dark { background-color: var(--luna-dark); }
