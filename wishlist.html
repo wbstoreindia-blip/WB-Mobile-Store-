@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wishlist - WB Store</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header class="top-navbar">
+        <div class="nav-top-row">
+            <button class="icon-btn" onclick="history.back()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            
+            <div class="page-title">
+                Saved for Later
+            </div>
+            
+            <div class="nav-actions">
+                <button id="theme-toggle" class="theme-btn">
+                    <i class="fa-solid fa-sun" id="theme-icon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content wishlist-page">
+        
+        <div id="empty-wishlist-message" class="empty-state">
+            <i class="fa-regular fa-heart empty-icon" style="color: var(--text-grey);"></i>
+            <h2>Your Wishlist is Empty</h2>
+            <p>Keep track of your favorite premium gadgets by clicking the heart icon.</p>
+            <a href="index.html" class="btn-primary" style="display: inline-block; padding: 12px 24px; text-decoration: none; margin-top: 15px;">
+                Discover Phones
+            </a>
+        </div>
+
+        <div id="filled-wishlist-container" style="display: none;">
+            
+            <div class="section-header" style="margin-bottom: 15px; padding: 0 15px;">
+                <h2 style="font-size: 14px; color: var(--text-grey);">Your Saved Items (<span id="wishlist-count">0</span>)</h2>
+            </div>
+
+            <div class="product-grid" id="wishlist-grid">
+                </div>
+        </div>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="wishlist.html" class="nav-item active">
+            <i class="fa-solid fa-heart"></i>
+            <span>Wishlist</span>
+        </a>
+        <a href="cart.html" class="nav-item">
+            <div class="cart-icon-wrapper">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="cart-badge" id="cart-badge">0</span>
+            </div>
+            <span>Cart</span>
+        </a>
+        <a href="account.html" class="nav-item">
+            <i class="fa-solid fa-user"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+
+    <script type="module" src="js/main.js"></script>
+    
+</body>
+</html>
