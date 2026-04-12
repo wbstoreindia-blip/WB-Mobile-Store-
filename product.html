@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product — Wb Mobile Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      padding: 24px 24px 0;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .breadcrumb a { color: var(--purple-lt); transition: color 0.2s; }
+    .breadcrumb a:hover { color: var(--neon-cyan); }
+    .breadcrumb span { color: var(--text-muted); }
+
+    /* Skeleton for product detail */
+    .product-skeleton {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      padding: 36px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .ps-img {
+      aspect-ratio: 4/3;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    .ps-lines { display: flex; flex-direction: column; gap: 14px; }
+    .ps-line {
+      height: 18px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    .ps-line.title  { width: 75%; height: 28px; }
+    .ps-line.price  { width: 35%; height: 24px; }
+    .ps-line.desc   { width: 90%; }
+    .ps-line.desc2  { width: 80%; }
+    .ps-line.desc3  { width: 60%; }
+    .ps-line.btn    { width: 55%; height: 48px; border-radius: var(--radius-md); margin-top: 12px; }
+
+    @media (max-width: 680px) {
+      .product-skeleton { grid-template-columns: 1fr; }
+    }
+
+    /* Related products */
+    .related-section {
+      padding: 48px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .related-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body data-page="product">
+  <div class="mesh-bg" aria-hidden="true"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-logo">WB<span>.</span>STORE</a>
+
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html">🏠 Home</a></li>
+      <li>
+        <a href="cart.html" class="nav-cart">
+          🛒 Cart
+          <span id="cartBadge" class="cart-badge">0</span>
+        </a>
+      </li>
+      <li id="navLogin" style="display:flex;">
+        <a href="login.html">🔑 Login</a>
+      </li>
+      <li id="navLogout" style="display:none;">
+        <button id="logoutBtn">🚪 Logout</button>
+      </li>
+      <li id="navAdmin" style="display:none;">
+        <a href="admin.html">⚙️ Admin</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <a href="index.html">Home</a>
+    <span>›</span>
+    <a href="index.html">Products</a>
+    <span>›</span>
+    <span id="breadcrumbName" style="color:var(--text-secondary);">Product</span>
+  </div>
+
+  <!-- PRODUCT DETAIL -->
+  <main class="product-detail-page">
+
+    <!-- Skeleton -->
+    <div id="productSkeleton" class="product-skeleton" aria-hidden="true">
+      <div class="ps-img"></div>
+      <div class="ps-lines">
+        <div class="ps-line title"></div>
+        <div class="ps-line price"></div>
+        <div class="ps-line desc"></div>
+        <div class="ps-line desc2"></div>
+        <div class="ps-line desc3"></div>
+        <div class="ps-line btn"></div>
+      </div>
+    </div>
+
+    <!-- Actual content (injected by app.js) -->
+    <div id="productDetail"></div>
+
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 <strong>Wb Mobile Store</strong> — West Bengal's Premier Mobile Destination</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+
+  <!-- Update breadcrumb after product loads -->
+  <script type="module">
+    const observer = new MutationObserver(() => {
+      const nameEl = document.querySelector(".product-detail-name");
+      const crumb  = document.getElementById("breadcrumbName");
+      if (nameEl && crumb) {
+        crumb.textContent = nameEl.textContent;
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.getElementById("productDetail"), { childList: true, subtree: true });
+  </script>
+</body>
+</html>

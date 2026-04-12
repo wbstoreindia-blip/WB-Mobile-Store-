@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart — Wb Mobile Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* Checkout confirmation modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      z-index: 9000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-box {
+      max-width: 420px;
+      width: 100%;
+      padding: 40px 32px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .modal-icon {
+      font-size: 3.5rem;
+      animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .modal-msg {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .modal-actions .btn { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="mesh-bg" aria-hidden="true"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-logo">WB<span>.</span>STORE</a>
+
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html">🏠 Home</a></li>
+      <li>
+        <a href="cart.html" class="nav-cart" aria-current="page">
+          🛒 Cart
+          <span id="cartBadge" class="cart-badge">0</span>
+        </a>
+      </li>
+      <li id="navLogin" style="display:flex;">
+        <a href="login.html">🔑 Login</a>
+      </li>
+      <li id="navLogout" style="display:none;">
+        <button id="logoutBtn">🚪 Logout</button>
+      </li>
+      <li id="navAdmin" style="display:none;">
+        <a href="admin.html">⚙️ Admin</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- CART PAGE -->
+  <main class="cart-page" role="main">
+    <h1 class="cart-title">Your <span>Cart</span></h1>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="cartEmpty" style="display:none;">
+      <div class="empty-icon">🛒</div>
+      <h3>Your cart is empty</h3>
+      <p>Looks like you haven't added anything yet. Let's change that!</p>
+      <a href="index.html" class="btn btn-glow" style="margin-top:8px;">Browse Products</a>
+    </div>
+
+    <!-- Cart items (injected by cart.js) -->
+    <div id="cartItems" aria-live="polite" aria-label="Cart items"></div>
+
+    <!-- Order summary -->
+    <div id="cartSummary" class="cart-summary" style="display:none;">
+      <div class="cart-summary-row">
+        <span>Subtotal</span>
+        <span id="cartSubtotal">₹0</span>
+      </div>
+      <div class="cart-summary-row">
+        <span>Shipping</span>
+        <span style="color:var(--neon-cyan);">FREE</span>
+      </div>
+      <div class="cart-summary-row">
+        <span>GST (18%)</span>
+        <span id="cartGST">₹0</span>
+      </div>
+      <div class="cart-summary-row total">
+        <span>Total</span>
+        <span class="total-amount" id="cartTotal">₹0</span>
+      </div>
+
+      <button class="btn btn-glow checkout-btn" id="checkoutBtn">
+        Proceed to Checkout 🚀
+      </button>
+
+      <button
+        class="btn btn-outline"
+        style="width:100%;margin-top:10px;"
+        onclick="window.location.href='index.html'"
+      >
+        ← Continue Shopping
+      </button>
+    </div>
+  </main>
+
+  <!-- Checkout success modal -->
+  <div class="modal-overlay" id="checkoutModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="glass-card modal-box">
+      <div class="modal-icon">🎉</div>
+      <h2 class="modal-title" id="modalTitle">Order Placed!</h2>
+      <p class="modal-msg">
+        Thank you for shopping at <strong>Wb Mobile Store</strong>!<br>
+        Your order has been received and will be delivered soon.
+      </p>
+      <div class="modal-actions">
+        <a href="index.html" class="btn btn-glow">Shop More</a>
+        <button class="btn btn-outline" id="closeModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>© 2025 <strong>Wb Mobile Store</strong> — West Bengal's Premier Mobile Destination</p>
+  </footer>
+
+  <script type="module">
+    import {
+      getCart, getCartTotal, removeFromCart,
+      updateQuantity, renderCartPage, clearCart, updateCartBadge
+    } from "./cart.js";
+    import { observeAuth, logoutUser } from "./auth.js";
+
+    // Expose to inline onclick attributes
+    window.cartRemove = (id) => {
+      removeFromCart(id);
+      renderCartPage();
+      updateSummaryExtras();
+    };
+
+    window.cartAdjust = (id, delta) => {
+      updateQuantity(id, delta);
+      renderCartPage();
+      updateSummaryExtras();
+    };
+
+    function updateSummaryExtras() {
+      const subtotal = getCartTotal();
+      const gst      = Math.round(subtotal * 0.18);
+      const s = document.getElementById("cartSubtotal");
+      const g = document.getElementById("cartGST");
+      if (s) s.textContent = `₹${subtotal.toLocaleString("en-IN")}`;
+      if (g) g.textContent = `₹${gst.toLocaleString("en-IN")}`;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateCartBadge();
+      renderCartPage();
+      updateSummaryExtras();
+
+      // Navbar auth
+      const hamburger = document.getElementById("hamburger");
+      const navLinks  = document.getElementById("navLinks");
+      if (hamburger && navLinks) {
+        hamburger.addEventListener("click", () => {
+          navLinks.classList.toggle("open");
+          hamburger.classList.toggle("active");
+        });
+      }
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) logoutBtn.addEventListener("click", logoutUser);
+
+      observeAuth((user) => {
+        const loginLink  = document.getElementById("navLogin");
+        const logoutLink = document.getElementById("navLogout");
+        const adminLink  = document.getElementById("navAdmin");
+        if (user) {
+          if (loginLink)  loginLink.style.display  = "none";
+          if (logoutLink) logoutLink.style.display = "flex";
+          if (adminLink && user.email === "wbstore.india@gmail.com") {
+            adminLink.style.display = "flex";
+          }
+        } else {
+          if (loginLink)  loginLink.style.display  = "flex";
+          if (logoutLink) logoutLink.style.display = "none";
+          if (adminLink)  adminLink.style.display  = "none";
+        }
+      });
+
+      // Checkout
+      const checkoutBtn = document.getElementById("checkoutBtn");
+      const modal       = document.getElementById("checkoutModal");
+      const closeModal  = document.getElementById("closeModal");
+
+      if (checkoutBtn) {
+        checkoutBtn.addEventListener("click", () => {
+          clearCart();
+          renderCartPage();
+          modal.classList.add("open");
+        });
+      }
+      if (closeModal) {
+        closeModal.addEventListener("click", () => modal.classList.remove("open"));
+      }
+      if (modal) {
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.classList.remove("open");
+        });
+      }
+    });
+  </script>
+</body>
+</html>
