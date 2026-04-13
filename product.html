@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product - WB Mobile Store</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="page-loader" id="page-loader">
+  <div class="loader-ring"></div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <button onclick="history.back()" class="nav-btn" style="flex-shrink:0">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <span style="font-family:var(--font-display);font-size:1.1rem;font-weight:600;color:var(--dark);flex:1;margin-left:8px" id="navbar-title">Product</span>
+  <div class="navbar-actions">
+    <a href="cart.html" class="nav-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.56L23 6H6"/></svg>
+      <span class="cart-badge" style="display:none">0</span>
+    </a>
+  </div>
+</nav>
+
+<div class="page-content" id="product-content">
+  <!-- Loaded by JS -->
+</div>
+
+<!-- REVIEWS SECTION -->
+<div class="section" id="reviews-section" style="display:none">
+  <div class="section-header"><h2 class="section-title">Reviews</h2></div>
+  <div id="reviews-list"></div>
+</div>
+
+<!-- ADD TO CART BOTTOM BAR -->
+<div id="cart-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:16px 20px;background:rgba(184,227,233,0.95);backdrop-filter:blur(16px);border-top:1px solid var(--glass-border);z-index:100;box-shadow:0 -4px 20px rgba(11,46,51,0.08)">
+  <button id="add-to-cart-btn" class="btn btn-primary btn-full">Add to Cart</button>
+</div>
+
+<script type="module">
+import { db } from './firebase-config.js';
+import { doc, getDoc, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+function showToast(msg, type='info', dur=3000) {
+  let c = document.querySelector('.toast-container');
+  if (!c) { c = document.createElement('div'); c.className='toast-container'; document.body.appendChild(c); }
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(20px)'; t.style.transition='all 0.3s'; setTimeout(()=>t.remove(),300); }, dur);
+}
+
+function updateBadge() {
+  const cart = JSON.parse(localStorage.getItem('wb_cart')||'[]');
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  document.querySelectorAll('.cart-badge').forEach(el=>{el.textContent=count;el.style.display=count>0?'flex':'none';});
+}
+
+const params = new URLSearchParams(location.search);
+const productId = params.get('id');
+
+let product = null;
+let currentImageIdx = 0;
+
+async function load() {
+  const loader = document.getElementById('page-loader');
+  const content = document.getElementById('product-content');
+  if (!productId) { content.innerHTML='<p style="padding:40px;text-align:center;color:#c0392b">Product not found.</p>'; loader.classList.add('hidden'); return; }
+
+  try {
+    const snap = await getDoc(doc(db, 'products', productId));
+    if (!snap.exists()) { content.innerHTML='<p style="padding:40px;text-align:center;color:#c0392b">Product not found.</p>'; loader.classList.add('hidden'); return; }
+    product = { id: snap.id, ...snap.data() };
+    renderProduct();
+    loadReviews();
+  } catch(e) {
+    content.innerHTML = `<p style="padding:40px;text-align:center;color:#c0392b">Error: ${e.message}</p>`;
+  } finally {
+    loader.classList.add('hidden');
+  }
+}
+
+function renderProduct() {
+  const content = document.getElementById('product-content');
+  const images  = product.images && product.images.length ? product.images : ['https://via.placeholder.com/400x400?text=No+Image'];
+  const outOfStock = product.stockStatus === 'out' || product.quantity <= 0;
+
+  document.getElementById('navbar-title').textContent = product.name;
+  document.title = product.name + ' - WB Mobile Store';
+
+  content.innerHTML = `
+    <div class="product-images">
+      <div class="product-image-main">
+        <img id="main-img" src="${images[0]}" alt="${product.name}">
+      </div>
+      ${images.length > 1 ? `
+      <div class="product-thumbnails">
+        ${images.map((img, i) => `<div class="thumb${i===0?' active':''}" data-idx="${i}"><img src="${img}" alt="view ${i+1}"></div>`).join('')}
+      </div>` : ''}
+    </div>
+
+    <div class="product-info">
+      <div class="product-brand">${product.brand || ''}</div>
+      <h1 class="product-title">${product.name}</h1>
+      <div class="product-prices">
+        ${product.price && product.price !== product.discountPrice ? `<span class="price-original">Rs. ${Number(product.price).toLocaleString('en-IN')}</span>` : ''}
+        <span class="price-discounted">Rs. ${Number(product.discountPrice || product.price).toLocaleString('en-IN')}</span>
+      </div>
+      ${outOfStock ? '<div class="product-stock-out">Out of Stock</div>' : ''}
+      ${product.desc ? `<div class="product-description">${product.desc}</div>` : ''}
+    </div>
+  `;
+
+  // Thumbnail click
+  document.querySelectorAll('.thumb').forEach(t => {
+    t.addEventListener('click', () => {
+      const idx = parseInt(t.dataset.idx);
+      document.getElementById('main-img').src = images[idx];
+      document.querySelectorAll('.thumb').forEach(th => th.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+
+  // Cart bar
+  const cartBar = document.getElementById('cart-bar');
+  const addBtn  = document.getElementById('add-to-cart-btn');
+  cartBar.style.display = '';
+  if (outOfStock) {
+    addBtn.disabled = true;
+    addBtn.textContent = 'Out of Stock';
+    addBtn.style.opacity = '0.6';
+  } else {
+    addBtn.addEventListener('click', () => {
+      let cart = JSON.parse(localStorage.getItem('wb_cart')||'[]');
+      const idx = cart.findIndex(i => i.id === product.id);
+      if (idx >= 0) cart[idx].qty += 1;
+      else cart.push({ id:product.id, name:product.name, price:product.discountPrice||product.price, image:images[0], qty:1 });
+      localStorage.setItem('wb_cart', JSON.stringify(cart));
+      updateBadge();
+      showToast('Added to cart!', 'success');
+    });
+  }
+
+  updateBadge();
+}
+
+async function loadReviews() {
+  const section = document.getElementById('reviews-section');
+  const list    = document.getElementById('reviews-list');
+  try {
+    const snap = await getDocs(query(collection(db,'reviews'), where('productId','==',productId), orderBy('createdAt','desc')));
+    const reviews = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if (!reviews.length) return;
+    section.style.display = '';
+    list.innerHTML = reviews.map(r => {
+      const date = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('en-IN') : '';
+      return `<div class="review-card">
+        <div class="review-header">
+          <span class="review-user">${r.userEmail?.split('@')[0] || 'User'}</span>
+          <span class="review-date">${date}</span>
+        </div>
+        <div class="review-text">${r.text}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { /* no reviews index yet */ }
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart - WB Mobile Store</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="page-loader" id="page-loader"><div class="loader-ring"></div></div>
+
+<nav class="navbar">
+  <button onclick="history.back()" class="nav-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <span style="font-family:var(--font-display);font-size:1.1rem;font-weight:600;color:var(--dark);flex:1;margin-left:8px">My Cart</span>
+  <a href="cart.html" class="nav-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.56L23 6H6"/></svg>
+    <span class="cart-badge" style="display:none">0</span>
+  </a>
+</nav>
+
+<div class="page-content" style="padding:20px 20px 100px">
+
+  <!-- EMPTY STATE -->
+  <div id="cart-empty" style="display:none" class="empty-state" style="padding-top:80px">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.56L23 6H6"/></svg>
+    <p style="margin-bottom:16px">Your cart is empty</p>
+    <a href="index.html" class="btn btn-primary">Continue Shopping</a>
+  </div>
+
+  <!-- CART ITEMS -->
+  <div id="cart-list"></div>
+
+  <!-- SUMMARY -->
+  <div id="cart-summary" style="display:none"></div>
+
+  <!-- CHECKOUT SECTION -->
+  <div id="checkout-section" style="display:none;margin-top:24px">
+    <h2 style="font-family:var(--font-display);font-size:1.2rem;color:var(--dark);margin-bottom:16px">Delivery Details</h2>
+
+    <form id="checkout-form">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" name="c-name" placeholder="Enter your full name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input class="form-input" type="tel" name="c-phone" placeholder="10-digit mobile number" maxlength="10" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery Address</label>
+        <textarea class="form-textarea" name="c-address" placeholder="House no., Street, Area, City, State, PIN" required style="min-height:80px"></textarea>
+      </div>
+
+      <h2 style="font-family:var(--font-display);font-size:1.2rem;color:var(--dark);margin-bottom:14px">Payment Method</h2>
+
+      <div class="payment-option selected" data-payment="cod">
+        <div class="payment-radio"></div>
+        <div>
+          <div class="payment-label">Cash on Delivery</div>
+          <div class="payment-sub">Pay when your order arrives</div>
+        </div>
+      </div>
+
+      <div class="payment-option payment-disabled" data-payment="online">
+        <div class="payment-radio"></div>
+        <div>
+          <div class="payment-label">Online Payment</div>
+          <div class="payment-sub" style="color:#c0392b">Online payment is under development</div>
+        </div>
+      </div>
+
+      <div id="checkout-error" class="error-text" style="display:none;color:#c0392b;font-size:0.85rem;margin-bottom:12px;background:rgba(192,57,43,0.08);padding:10px 14px;border-radius:8px;border:1px solid rgba(192,57,43,0.18)"></div>
+
+      <button type="submit" class="btn btn-primary btn-full" style="margin-top:8px">Place Order</button>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="cart.js"></script>
+</body>
+</html>
