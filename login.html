@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — WB Mobile Store</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .error-text {
+      color: #c0392b;
+      font-size: 0.83rem;
+      margin-top: 10px;
+      display: none;
+      background: rgba(192,57,43,0.08);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(192,57,43,0.2);
+      line-height: 1.5;
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.78rem;
+      color: var(--secondary);
+    }
+    .auth-footer a {
+      color: var(--card);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    /* Show/hide panes correctly */
+    #pane-register { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+
+    <!-- LOGO -->
+    <div class="auth-logo">
+      <img src="logo.png" alt="WB Mobile Store"
+           onerror="this.style.display='none'" style="border-radius:12px">
+      <h1>WB Mobile Store</h1>
+      <p>Premium Mobiles &amp; Accessories</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-login"    type="button">Sign In</button>
+      <button class="tab-btn"        id="tab-register" type="button">Register</button>
+    </div>
+
+    <!-- ── LOGIN PANE ── -->
+    <div id="pane-login">
+      <form id="login-form" autocomplete="on" novalidate>
+
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email Address</label>
+          <input class="form-input"
+                 type="email"
+                 id="login-email"
+                 name="email"
+                 placeholder="you@example.com"
+                 autocomplete="email"
+                 required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-pass">Password</label>
+          <input class="form-input"
+                 type="password"
+                 id="login-pass"
+                 name="password"
+                 placeholder="Enter your password"
+                 autocomplete="current-password"
+                 required>
+        </div>
+
+        <!-- Error message -->
+        <div id="error-login" class="error-text"></div>
+
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:12px">
+          Sign In
+        </button>
+
+      </form>
+    </div>
+
+    <!-- ── REGISTER PANE ── -->
+    <div id="pane-register">
+      <form id="register-form" autocomplete="on" novalidate>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-name-input">Full Name</label>
+          <input class="form-input"
+                 type="text"
+                 id="reg-name-input"
+                 name="reg-name"
+                 placeholder="Your full name"
+                 autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-email-input">Email Address</label>
+          <input class="form-input"
+                 type="email"
+                 id="reg-email-input"
+                 name="reg-email"
+                 placeholder="you@example.com"
+                 autocomplete="email"
+                 required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-pass-input">Password</label>
+          <input class="form-input"
+                 type="password"
+                 id="reg-pass-input"
+                 name="reg-password"
+                 placeholder="At least 6 characters"
+                 autocomplete="new-password"
+                 required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-confirm-input">Confirm Password</label>
+          <input class="form-input"
+                 type="password"
+                 id="reg-confirm-input"
+                 name="reg-confirm"
+                 placeholder="Repeat your password"
+                 autocomplete="new-password"
+                 required>
+        </div>
+
+        <!-- Error message -->
+        <div id="error-register" class="error-text"></div>
+
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:12px">
+          Create Account
+        </button>
+
+      </form>
+    </div>
+
+    <!-- Footer note -->
+    <div class="auth-footer">
+      By continuing you agree to our
+      <a href="#">Terms of Service</a> &amp; <a href="#">Privacy Policy</a>
+    </div>
+
+  </div>
+</div>
+
+<script type="module" src="auth.js"></script>
+</body>
+</html>

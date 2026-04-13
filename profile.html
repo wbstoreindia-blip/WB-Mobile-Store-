@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — WB Mobile Store</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Profile header dark band ── */
+    .profile-header {
+      background: var(--dark);
+      padding: 36px 20px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .profile-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(184,227,233,0.15);
+      border: 3px solid rgba(184,227,233,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--bg);
+      margin-bottom: 14px;
+      font-family: var(--font-display);
+      letter-spacing: 0.02em;
+    }
+    .profile-name  { font-family:var(--font-display);font-size:1.25rem;color:var(--white);margin-bottom:4px; }
+    .profile-email { font-size:0.82rem;color:rgba(184,227,233,0.6); }
+    .profile-signout-btn {
+      margin-top: 18px;
+      padding: 9px 24px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: rgba(184,227,233,0.85);
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-main);
+    }
+    .profile-signout-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    /* ── Sticky sub-navbar on top of dark header ── */
+    .sub-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: rgba(11,46,51,0.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .sub-navbar a, .sub-navbar span {
+      color: var(--bg);
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+    .sub-navbar .title {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* ── Address form card ── */
+    .address-card {
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .address-card-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .success-text {
+      color: #1e8449;
+      font-size: 0.83rem;
+      background: rgba(39,174,96,0.1);
+      border: 1px solid rgba(39,174,96,0.2);
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+    .error-text-form {
+      color: #c0392b;
+      font-size: 0.83rem;
+      background: rgba(192,57,43,0.08);
+      border: 1px solid rgba(192,57,43,0.2);
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── Guest view ── */
+    .guest-view-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 60px 20px;
+      gap: 16px;
+    }
+    .guest-view-wrap svg { opacity: 0.35; }
+    .guest-view-wrap h2 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      color: var(--dark);
+    }
+    .guest-view-wrap p {
+      font-size: 0.9rem;
+      color: var(--secondary);
+      max-width: 280px;
+      line-height: 1.6;
+    }
+    .guest-view-wrap .btn { min-width: 180px; }
+  </style>
+</head>
+<body>
+
+<div class="page-loader" id="page-loader">
+  <div class="loader-ring"></div>
+</div>
+
+<!-- ── Sub-Navbar ── -->
+<nav class="sub-navbar">
+  <a href="index.html" aria-label="Back to home">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+  </a>
+  <span class="title">My Profile</span>
+  <a href="cart.html" style="position:relative" aria-label="Cart">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.56L23 6H6"/>
+    </svg>
+    <span class="cart-badge" style="display:none;border-color:var(--dark)">0</span>
+  </a>
+</nav>
+
+<!-- ══════════════════════════════════════
+     GUEST VIEW  (shown when not logged in)
+═══════════════════════════════════════ -->
+<div id="guest-view" style="display:none">
+  <div class="guest-view-wrap">
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none"
+         stroke="var(--card)" stroke-width="1.2">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+    <h2>You're not signed in</h2>
+    <p>Sign in to view your orders, track deliveries, and manage your profile.</p>
+    <a href="login.html" class="btn btn-primary">Login / Register</a>
+    <a href="index.html" class="btn btn-secondary" style="margin-top:-4px">
+      Continue Browsing
+    </a>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LOGGED-IN VIEW
+═══════════════════════════════════════ -->
+<div id="logged-view" style="display:none">
+
+  <!-- Profile header -->
+  <div class="profile-header">
+    <div class="profile-avatar">
+      <span id="profile-avatar-letter">U</span>
+    </div>
+    <div class="profile-name"  id="profile-name">User</div>
+    <div class="profile-email" id="profile-email">Loading...</div>
+    <!-- Sign-out button — uses window.signOutUser from auth.js / profile.js -->
+    <button class="profile-signout-btn" id="sign-out-btn" type="button">
+      Sign Out
+    </button>
+  </div>
+
+  <!-- Page content -->
+  <div class="page-content" style="padding: 20px 20px 90px">
+
+    <!-- ── SAVED ADDRESS SECTION ── -->
+    <div class="address-card">
+      <div class="address-card-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        Delivery Address
+      </div>
+
+      <form id="address-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="addr-name">Full Name</label>
+          <input class="form-input"
+                 type="text"
+                 id="addr-name"
+                 placeholder="Your full name"
+                 autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="addr-phone">Phone Number</label>
+          <input class="form-input"
+                 type="tel"
+                 id="addr-phone"
+                 placeholder="10-digit mobile number"
+                 maxlength="10"
+                 autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="addr-address">Address</label>
+          <textarea class="form-textarea"
+                    id="addr-address"
+                    placeholder="House no., Street, Area, City, State, PIN"
+                    style="min-height:80px"
+                    autocomplete="street-address"></textarea>
+        </div>
+
+        <div id="address-error"   class="error-text-form"></div>
+        <div id="address-success" class="success-text"></div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:4px">
+          Save Address
+        </button>
+      </form>
+    </div>
+
+    <!-- ── ORDERS SECTION ── -->
+    <h2 style="font-family:var(--font-display);font-size:1.2rem;color:var(--dark);margin-bottom:16px">
+      My Orders
+    </h2>
+
+    <div id="orders-list">
+      <div style="text-align:center;padding:40px">
+        <div class="loader-ring" style="margin:0 auto"></div>
+      </div>
+    </div>
+
+    <div id="orders-empty" style="display:none" class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5">
+        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+      </svg>
+      <p style="margin-bottom:16px">No orders yet</p>
+      <a href="index.html" class="btn btn-primary">Start Shopping</a>
+    </div>
+
+  </div><!-- /page-content -->
+</div><!-- /logged-view -->
+
+<!-- ── BOTTOM NAV ── -->
+<nav class="bottom-nav">
+  <a href="index.html" class="bottom-nav-btn">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    Home
+  </a>
+  <a href="cart.html" class="bottom-nav-btn">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+      <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.56L23 6H6"/>
+    </svg>
+    Cart
+  </a>
+  <a href="profile.html" class="bottom-nav-btn active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+    Profile
+  </a>
+</nav>
+
+<!-- ══════════════════════════════════════
+     TRACKING MODAL
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="tracking-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Order Tracking</div>
+    <div id="tracking-content"></div>
+    <button class="btn btn-secondary btn-full"
+            id="close-tracking"
+            style="margin-top:20px"
+            type="button">
+      Close
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     REVIEW MODAL
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Write a Review</div>
+    <form id="review-form" novalidate>
+      <div class="form-group">
+        <label class="form-label">Your Review</label>
+        <textarea class="form-textarea"
+                  name="review-text"
+                  id="review-text"
+                  placeholder="Share your experience with this product..."
+                  required
+                  style="min-height:120px"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Submit Review</button>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="profile.js"></script>
+</body>
+</html>
